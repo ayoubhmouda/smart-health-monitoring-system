@@ -27,9 +27,8 @@ services:
     depends_on:
       - db
       - redis
-    environment:
-      - DATABASE_URL=postgres://postgres:postgres@db:5432/health_monitor
-      - REDIS_URL=redis://redis:6379/0
+    env_file:
+      - .env
 
   celery_worker:
     build: .
@@ -39,9 +38,8 @@ services:
     depends_on:
       - redis
       - db
-    environment:
-      - DATABASE_URL=postgres://postgres:postgres@db:5432/health_monitor
-      - REDIS_URL=redis://redis:6379/0
+    env_file:
+      - .env
 
   celery_beat:
     build: .
@@ -51,9 +49,8 @@ services:
     depends_on:
       - redis
       - db
-    environment:
-      - DATABASE_URL=postgres://postgres:postgres@db:5432/health_monitor
-      - REDIS_URL=redis://redis:6379/0
+    env_file:
+      - .env
 
 volumes:
   postgres_data:
