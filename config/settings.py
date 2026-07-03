@@ -149,4 +149,9 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'sensors.tasks.read_all_active_sensors',
         'schedule': 10.0,  # كل 10 ثوانٍ
     },
+
+    'aggregate-context-every-30-seconds': {
+    'task': 'context.tasks.aggregate_all_contexts',
+    'schedule': 30.0,
+    },
 }
