@@ -46,10 +46,12 @@ class DataSourceConfig(models.Model):
         ABNORMAL = 'abnormal', 'Abnormal'
         RANDOM = 'random', 'Random'
         CUSTOM = 'custom', 'Custom'
+        GRADUAL_DETERIORATION = 'gradual_deterioration', 'Gradual Deterioration'  # ← هذا السطر الجديد
+        EMERGENCY_SPIKE = 'emergency_spike', 'Emergency Spike'
 
     sensor = models.OneToOneField(Sensor, on_delete=models.CASCADE, related_name='data_source_config')
     source = models.CharField(max_length=10, choices=Source.choices, default=Source.SIMULATED)
-    simulation_profile = models.CharField(max_length=20, choices=SimulationProfile.choices, default=SimulationProfile.NORMAL)
+    simulation_profile = models.CharField(max_length=25, choices=SimulationProfile.choices, default=SimulationProfile.NORMAL)
     physical_connection_info = models.JSONField(default=dict, blank=True)
     updated_at = models.DateTimeField(auto_now=True)
 
