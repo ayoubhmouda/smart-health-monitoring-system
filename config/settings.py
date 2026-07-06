@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'rules',
     'notifications',
     'dashboard',
+    'rest_framework',
     'api',
 ]
 

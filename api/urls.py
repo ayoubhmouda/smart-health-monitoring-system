@@ -1,0 +1,22 @@
+# api/urls.py
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
+from . import views
+
+router = DefaultRouter()
+router.register(r'monitored-elements', views.MonitoredElementViewSet)
+router.register(r'patients', views.PatientViewSet)
+router.register(r'medical-histories', views.MedicalHistoryViewSet)
+router.register(r'sensor-types', views.SensorTypeViewSet)
+router.register(r'sensors', views.SensorViewSet)
+router.register(r'data-source-configs', views.DataSourceConfigViewSet)
+router.register(r'sensor-readings', views.SensorReadingViewSet)
+router.register(r'contexts', views.ContextViewSet)
+router.register(r'context-histories', views.ContextHistoryViewSet)
+router.register(r'insights', views.InsightViewSet)
+router.register(r'corrective-actions', views.CorrectiveActionViewSet)
+router.register(r'notifications', views.NotificationViewSet)
+
+urlpatterns = [
+    path('', include(router.urls)),
+]
