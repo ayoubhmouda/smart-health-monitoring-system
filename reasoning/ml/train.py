@@ -2,8 +2,8 @@ import pickle
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
-from .data_generator import ClinicalScenarioGenerator
-from .feature_engineering import prepare_training_data
+from reasoning.ml.data_generator import ClinicalScenarioGenerator
+from reasoning.ml.feature_engineering import prepare_training_data
 import os
 
 def train_and_save_model():

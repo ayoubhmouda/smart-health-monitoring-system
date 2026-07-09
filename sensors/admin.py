@@ -16,3 +16,7 @@ class DataSourceConfigAdmin(admin.ModelAdmin):
 @admin.register(SensorReading)
 class SensorReadingAdmin(admin.ModelAdmin):
     list_display = ('sensor', 'value', 'source', 'recorded_at')
+    list_per_page = 20
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('sensor__sensor_type')

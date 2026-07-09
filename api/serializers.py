@@ -23,7 +23,7 @@ class PatientSerializer(serializers.ModelSerializer):
 class MedicalHistorySerializer(serializers.ModelSerializer):
     class Meta:
         model = MedicalHistory
-        fields = '__all__'
+        fields = '__all__'  
 
 # --- Sensors ---
 class SensorTypeSerializer(serializers.ModelSerializer):

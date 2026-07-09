@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Health Monitor - Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+<body class="bg-gray-100">
+  <div id="app">
+    <nav class="bg-white shadow-md p-4 flex justify-between items-center">
+      <h1 class="text-2xl font-bold text-blue-800">Smart Health Monitor</h1>
+      <div class="flex items-center space-x-4 rtl:space-x-reverse">
+        <span class="text-gray-600">آخر تحديث: [[ lastUpdate ]]</span>
+        <button @click="refreshAll" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">تحديث</button>
+      </div>
+    </nav>
+
+    <div class="flex min-h-screen">
+      <aside class="w-64 bg-white shadow-md p-4">
+        <h2 class="text-lg font-semibold mb-4">المرضى</h2>
+        <ul>
+          <li v-for="patient in patients" :key="patient.id"
+              @click="selectPatient(patient)"
+              :class="{'bg-blue-100': selectedPatient && selectedPatient.id === patient.id}"
+              class="p-3 rounded cursor-pointer hover:bg-gray-100 mb-2">
+            <div class="font-medium">[[ patient.full_name ]]</div>
+            <div class="text-sm text-gray-500">[[ patient.element_type ]] · [[ patient.age ]] سنة</div>
+          </li>
+        </ul>
+      </aside>
+
+      <main class="flex-1 p-6">
+        <div v-if="selectedPatient">
+          <h2 class="text-2xl font-bold mb-4">[[ selectedPatient.full_name ]]</h2>
+
+          <div class="grid grid-cols-3 gap-4 mb-6">
+            <div class="bg-white p-4 rounded shadow text-center">
+              <div class="text-sm text-gray-500">معدل ضربات القلب</div>
+              <div class="text-3xl font-bold">[[ latestHR ]] <span class="text-base font-normal">bpm</span></div>
+            </div>
+            <div class="bg-white p-4 rounded shadow text-center">
+              <div class="text-sm text-gray-500">تشبع الأكسجين</div>
+              <div class="text-3xl font-bold">[[ latestO2 ]] <span class="text-base font-normal">%</span></div>
+            </div>
+            <div class="bg-white p-4 rounded shadow text-center">
+              <div class="text-sm text-gray-500">درجة الحرارة</div>
+              <div class="text-3xl font-bold">[[ latestTemp ]] <span class="text-base font-normal">°C</span></div>
+            </div>
+          </div>
+
+          <div v-if="latestInsight" class="bg-white p-4 rounded shadow mb-6">
+            <h3 class="text-lg font-semibold mb-2">أحدث تنبؤ</h3>
+            <div :class="severityClass" class="p-3 rounded">
+              <span class="font-bold">[[ latestInsight.insight_type ]]</span>
+              · خطورة: [[ latestInsight.severity ]]
+              · ثقة: [[ (latestInsight.confidence * 100).toFixed(1) ]]%
+            </div>
+          </div>
+
+          <div class="bg-white p-4 rounded shadow">
+            <h3 class="text-lg font-semibold mb-2">الحساسات والمصادر</h3>
+            <table class="w-full">
+              <thead><tr class="text-right"><th class="p-2">الحساس</th><th class="p-2">المصدر</th><th class="p-2">تبديل</th></tr></thead>
+              <tbody>
+                <tr v-for="sensor in patientSensors" :key="sensor.id">
+                  <td class="p-2">[[ sensor.sensor_type.name ]]</td>
+                  <td class="p-2">[[ sensor.data_source_config?.source || 'غير محدد' ]]</td>
+                  <td class="p-2">
+                    <button @click="toggleSource(sensor)"
+                            class="bg-green-500 text-white px-3 py-1 rounded text-sm hover:bg-green-600">
+                      تبديل إلى [[ sensor.data_source_config?.source === 'SIMULATED' ? 'فيزيائي' : 'محاكي' ]]
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div v-else class="text-center text-gray-500 mt-20">
+          اختر مريضاً من القائمة لعرض بياناته
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script src="/static/dashboard/app.js"></script>
+</body>
+</html>

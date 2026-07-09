@@ -32,6 +32,13 @@ class Sensor(models.Model):
     mode = models.CharField(max_length=20, choices=Mode.choices, default=Mode.TIME_BASED)
     is_active = models.BooleanField(default=True)
 
+    monitored_element = models.ForeignKey(
+    'core.MonitoredElement',
+    on_delete=models.CASCADE,
+    null=True, blank=True,
+    related_name='sensors'
+    )
+
     def __str__(self):
         return f"{self.sensor_type.name} ({self.device_identifier})"
 
