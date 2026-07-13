@@ -10,3 +10,5 @@ staticfiles/
 .vscode/
 .idea/
 Thumbs.db
+*.csv
+*.pkl
