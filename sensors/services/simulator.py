@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from typing import Dict, Any, Optional
 
 class HealthSimulator:
-    """يولد قراءات واقعية للحساسات الفسيولوجية والنشاط والبيئة بناءً على ملفات شخصية متناسقة طبياً."""
+    """يولد قراءات واقعية متناسقة طبياً مع نظام كاش اختياري لحفظ الحالة."""
 
     PROFILES = {
         'normal': {
@@ -16,7 +16,10 @@ class HealthSimulator:
             'body_temperature': (36.1, 37.2),
             'activity_level': (0, 3),
             'room_temperature': (20, 24),
+            'blood_glucose': (80, 120),
+            'respiratory_rate': (14, 18),
             'description': 'Patient stable'
+           
         },
         'gradual_deterioration': {
             'heart_rate': (70, 115),
@@ -26,6 +29,8 @@ class HealthSimulator:
             'body_temperature': (37.0, 39.5),
             'activity_level': (3, 0),
             'room_temperature': (21, 26),
+            'blood_glucose': (90, 200),
+            'respiratory_rate': (16, 28),
             'description': 'Patient gradually worsening'
         },
         'abnormal': {
@@ -36,6 +41,8 @@ class HealthSimulator:
             'body_temperature': (35.0, 36.0),
             'activity_level': (0, 1),
             'room_temperature': (20, 25),
+            'blood_glucose': (50, 65),
+            'respiratory_rate': (8, 11),
             'description': 'Concerning low vitals'
         },
         'emergency_spike': {
@@ -46,6 +53,8 @@ class HealthSimulator:
             'body_temperature': (39.0, 41.0),
             'activity_level': (0, 0),
             'room_temperature': (22, 26),
+            'blood_glucose': (250, 400),
+            'respiratory_rate': (30, 45),
             'description': 'Dangerous spike'
         },
         'recovery': {
@@ -56,6 +65,8 @@ class HealthSimulator:
             'body_temperature': (38.5, 37.0),
             'activity_level': (0, 2),
             'room_temperature': (22, 22),
+            'blood_glucose': (180, 95),
+            'respiratory_rate': (26, 16),
             'description': 'Recovering'
         },
         'custom': {
@@ -66,62 +77,106 @@ class HealthSimulator:
             'body_temperature': (37.0, 37.0),
             'activity_level': (1, 1),
             'room_temperature': (22, 22),
+            'blood_glucose': (100, 100),
+            'respiratory_rate': (16, 16),
             'description': 'Manual override'
         }
     }
 
-    def __init__(self, profile: str = 'normal'):
-        self.profile = profile
-        self.iteration = 0
-        self.start_time = time.time()
-        self.deterioration_progress = 0.0
-        self._cached_batch = {}
-        self._unfetched_sensors = set()
+    def __init__(self, profile: str = 'normal', patient_id: Optional[int] = None):
+        self.patient_id = patient_id
+        self.cache_key = f"sim_state_patient_{patient_id}" if patient_id else None
+        
+        # محاولة استعادة حالة المحاكاة من الكاش إذا كان patient_id موجوداً
+        # هذا آمن لأننا نستدعي cache داخل الكلاس نفسه
+        cached_state = None
+        if self.cache_key:
+            try:
+                from django.core.cache import cache
+                cached_state = cache.get(self.cache_key)
+            except Exception:
+                pass
 
-    def set_profile(self, profile: str):
-        if profile in self.PROFILES:
+        if cached_state:
+            self.profile = cached_state.get('profile', profile)
+            self.iteration = cached_state.get('iteration', 0)
+            self.start_time = cached_state.get('start_time', time.time())
+            self.deterioration_progress = cached_state.get('deterioration_progress', 0.0)
+            self._cached_batch = cached_state.get('cached_batch', {})
+            self._unfetched_sensors = set(cached_state.get('unfetched_sensors', []))
+        else:
             self.profile = profile
             self.iteration = 0
             self.start_time = time.time()
             self.deterioration_progress = 0.0
             self._cached_batch = {}
             self._unfetched_sensors = set()
-        else:
+
+    def _save_state_to_cache(self):
+        """تحفظ الحالة الحالية للمحاكاة في الكاش."""
+        if not self.cache_key:
+            return
+        try:
+            from django.core.cache import cache
+            state = {
+                'profile': self.profile,
+                'iteration': self.iteration,
+                'start_time': self.start_time,
+                'deterioration_progress': self.deterioration_progress,
+                'cached_batch': self._cached_batch,
+                'unfetched_sensors': list(self._unfetched_sensors)
+            }
+            cache.set(self.cache_key, state, timeout=7200)
+        except Exception:
+            pass
+
+    def set_profile(self, profile: str):
+        if profile not in self.PROFILES:
             raise ValueError(f"Unknown profile: {profile}")
+
+        # إذا كان نفس السيناريو والكاش ممتلئ، لا داعي لتصفير الحالة
+        if self.profile == profile and self._cached_batch:
+            return
+            
+        self.profile = profile
+        self.iteration = 0
+        self.start_time = time.time()
+        self.deterioration_progress = 0.0
+        self._cached_batch = {}
+        self._unfetched_sensors = set()
+        self._save_state_to_cache()
 
     def set_custom_values(self, overrides: Dict[str, float]):
         self.custom_overrides = overrides
         self._cached_batch = {}
+        self._save_state_to_cache()
 
     def _interpolate(self, low, high, progress):
         return low + (high - low) * progress
 
     def _generate_coherent_batch(self) -> Dict[str, float]:
-        """تولد حزمة قراءات متناسقة فسيولوجياً للحظة الحالية كاملة."""
         profile_config = self.PROFILES[self.profile]
         base_vals = {}
 
-        # 1. معالجة الملف الشخصي اليدوي (Custom)
+        # معالجة الملف اليدوي (Custom)
         if self.profile == 'custom' and hasattr(self, 'custom_overrides'):
             for s_type in profile_config.keys():
-                if s_type == 'description':
-                    continue
+                if s_type == 'description': continue
                 val = self.custom_overrides.get(s_type, 0.0)
                 base_vals[s_type] = val + random.uniform(-0.5, 0.5)
             base_vals['activity_level'] = float(int(self.custom_overrides.get('activity_level', 1.0)))
             return base_vals
 
-        # 2. حساب التقدم للتدهور التدريجي
+        # حساب التقدم للتدهور التدريجي
         progress = 0.0
         if self.profile == 'gradual_deterioration':
             elapsed_seconds = time.time() - self.start_time
             progress = min(1.0, elapsed_seconds / 7200.0)
             self.deterioration_progress = progress
 
-        # 3. توليد القيم الأساسية (مع تخطي 'description' لتجنب ValueError)
+        # توليد القيم الأساسية
         for s_type, val in profile_config.items():
-            if s_type == 'description':
-                continue
+            if s_type == 'description': continue
             low, high = val
 
             if self.profile == 'gradual_deterioration':
@@ -135,39 +190,36 @@ class HealthSimulator:
                 else:
                     base_vals[s_type] = random.uniform(low, high)
 
-        # 4. محرك القوانين الفسيولوجية (ربط النشاط بالعلامات الحيوية في الحالة الطبيعية)
+        # الربط الفسيولوجي الذكي للحالة الطبيعية
         if self.profile == 'normal':
             activity = float(int(base_vals['activity_level']))
-
-            if activity == 3.0:      # جري
+            if activity == 3.0:
                 base_vals['heart_rate'] = random.uniform(135.0, 155.0)
                 base_vals['blood_pressure_systolic'] = random.uniform(140.0, 155.0)
                 base_vals['blood_pressure_diastolic'] = random.uniform(85.0, 95.0)
-            elif activity == 2.0:    # مشي سريع
+            elif activity == 2.0:
                 base_vals['heart_rate'] = random.uniform(95.0, 120.0)
                 base_vals['blood_pressure_systolic'] = random.uniform(122.0, 132.0)
                 base_vals['blood_pressure_diastolic'] = random.uniform(80.0, 84.0)
-            elif activity == 1.0:    # حركة خفيفة
+            elif activity == 1.0:
                 base_vals['heart_rate'] = random.uniform(75.0, 90.0)
                 base_vals['blood_pressure_systolic'] = random.uniform(115.0, 121.0)
                 base_vals['blood_pressure_diastolic'] = random.uniform(75.0, 79.0)
-            else:                    # راحة تامة
+            else:
                 base_vals['heart_rate'] = random.uniform(60.0, 73.0)
                 base_vals['blood_pressure_systolic'] = random.uniform(110.0, 114.0)
                 base_vals['blood_pressure_diastolic'] = random.uniform(70.0, 74.0)
 
-        # 5. الضوضاء والتقريب
+        # إضافة الضوضاء والتقريب النهائي
         final_batch = {}
         for s_type, val in base_vals.items():
             if s_type == 'activity_level':
                 final_batch[s_type] = float(int(val))
             else:
                 noise = random.uniform(-1.0, 1.0) if self.profile != 'gradual_deterioration' else random.uniform(-1.5, 1.5)
-                if s_type == 'room_temperature':
-                    noise = 0
+                if s_type == 'room_temperature': noise = 0
                 res = round(val + noise, 1)
-                if s_type == 'oxygen_saturation':
-                    res = min(100.0, res)
+                if s_type == 'oxygen_saturation': res = min(100.0, res)
                 final_batch[s_type] = res
 
         return final_batch
@@ -179,4 +231,18 @@ class HealthSimulator:
             self.iteration += 1
 
         self._unfetched_sensors.discard(sensor_type)
-        return self._cached_batch.get(sensor_type, 0.0)
+        val = self._cached_batch.get(sensor_type, 0.0)
+        
+        self._save_state_to_cache()
+        return val
+
+# للتجربة السريعة واختبار التناسق الفسيولوجي الجديد
+if __name__ == "__main__":
+    sim = HealthSimulator(profile='normal')
+    print("--- اختبار التناسق في الحالة الطبيعية (Normal Profile) ---")
+    for loop in range(3):
+        print(f"\n[الدورة {loop+1}]")
+        print("Activity Level:   ", sim.generate_reading('activity_level'))
+        print("Heart Rate:       ", sim.generate_reading('heart_rate'))
+        print("Blood Pressure SYS:", sim.generate_reading('blood_pressure_systolic'))
+        print("Oxygen Saturation:", sim.generate_reading('oxygen_saturation'))

@@ -1,5 +1,5 @@
 import numpy as np
-import pandas as pd  # استيراد باندا أساسي لتحويل الميزات
+import pandas as pd
 
 
 def extract_features_from_window(contexts):
@@ -15,6 +15,11 @@ def extract_features_from_window(contexts):
     body_temp = [c.get("body_temperature", 0) for c in contexts]
     act = [c.get("activity_level", 0) for c in contexts]
     room_temp = [c.get("room_temperature", 0) for c in contexts]
+    blood_glucose = [c.get("blood_glucose", 0) for c in contexts]
+    respiratory_rate = [c.get("respiratory_rate", 0) for c in contexts]
+
+    # حساب MAP (Mean Arterial Pressure) من SBP و DBP
+    map_vals = [dbp + (sbp - dbp) / 3 for sbp, dbp in zip(bp_sys, bp_dia)]
 
     features = {}
 
@@ -24,18 +29,27 @@ def extract_features_from_window(contexts):
     features["current_bp_dia"] = bp_dia[-1]
     features["current_o2"] = o2[-1]
     features["current_body_temp"] = body_temp[-1]
+    features["current_blood_glucose"] = blood_glucose[-1]
+    features["current_respiratory_rate"] = respiratory_rate[-1]
+    features["current_map"] = map_vals[-1]
 
-    # [إضافة حاسمة]: أعلام الخطورة المطلقة (لحماية النموذج من عتبات الاستقرار الكاذب)
+    # أعلام الخطورة المطلقة
     features["is_hr_critically_high"] = 1 if hr[-1] > 100 else 0
     features["is_o2_critically_low"] = 1 if o2[-1] < 92 else 0
     features["is_bp_sys_critically_high"] = 1 if bp_sys[-1] > 140 else 0
 
-    # --- 2. Tالتغير اللحظي الفوري ---
-    features["hr_immediate_change"] = hr[-1] - hr[-2] if len(hr) > 1 else 0
-    features["bp_sys_immediate_change"] = (
-        bp_sys[-1] - bp_sys[-2] if len(bp_sys) > 1 else 0
-    )
-    features["o2_immediate_change"] = o2[-1] - o2[-2] if len(o2) > 1 else 0
+    # --- 2. ميزات الذاكرة الزمنية (Lag & Delta) – متوافقة مع PhysioNet ---
+    # Heart Rate
+    features["hr_past_hour"] = hr[-2] if len(hr) >= 2 else hr[-1]
+    features["hr_change"] = hr[-1] - hr[-2] if len(hr) >= 2 else 0
+
+    # Oxygen Saturation
+    features["o2sat_past_hour"] = o2[-2] if len(o2) >= 2 else o2[-1]
+    features["o2_change"] = o2[-1] - o2[-2] if len(o2) >= 2 else 0
+
+    # Body Temperature
+    features["temp_past_hour"] = body_temp[-2] if len(body_temp) >= 2 else body_temp[-1]
+    features["temp_change"] = body_temp[-1] - body_temp[-2] if len(body_temp) >= 2 else 0
 
     # --- 3. إحصائيات النافذة الزمنية العامة ---
     features["hr_mean"] = np.mean(hr)
@@ -54,6 +68,20 @@ def extract_features_from_window(contexts):
     features["body_temp_mean"] = np.mean(body_temp)
     features["body_temp_std"] = np.std(body_temp)
 
+    # ميزات MAP
+    features["map_mean"] = np.mean(map_vals)
+    features["map_std"] = np.std(map_vals)
+    features["map_trend"] = map_vals[-1] - map_vals[0] if len(map_vals) > 1 else 0
+
+    # ميزات المستشعرين الجديدين
+    features["bg_mean"] = np.mean(blood_glucose)
+    features["bg_std"] = np.std(blood_glucose)
+    features["bg_trend"] = blood_glucose[-1] - blood_glucose[0] if len(blood_glucose) > 1 else 0
+
+    features["rr_mean"] = np.mean(respiratory_rate)
+    features["rr_std"] = np.std(respiratory_rate)
+    features["rr_trend"] = respiratory_rate[-1] - respiratory_rate[0] if len(respiratory_rate) > 1 else 0
+
     features["last_activity"] = act[-1]
     features["last_room_temp"] = room_temp[-1]
     features["window_size"] = len(contexts)
@@ -68,7 +96,11 @@ def extract_features_from_window(contexts):
     features["smoking_status"] = last_ctx.get("smoking_status", 0)
     features["bmi"] = last_ctx.get("bmi", 25)
 
-    # --- 5. ميزات التفاعل المركبة (Interaction Features) ---
+    # ميزات التاريخ العائلي
+    features["family_heart_disease"] = last_ctx.get("family_heart_disease", 0)
+    features["family_diabetes"] = last_ctx.get("family_diabetes", 0)
+
+    # --- 5. ميزات التفاعل المركبة ---
     features["hr_x_hypertension"] = (
         features["current_hr"] * features["has_hypertension"]
     )
@@ -76,37 +108,30 @@ def extract_features_from_window(contexts):
         features["current_bp_sys"] * features["has_hypertension"]
     )
 
-    # [إضافة حاسمة]: دمج أعلام الخطورة المطلقة بالتاريخ الطبي للمريض
     features["crit_hr_x_heart_disease"] = (
-        features["is_hr_critically_high"] * last_ctx.get("has_heart_disease", 0)
+        features["is_hr_critically_high"] * features.get("has_heart_disease", 0)
     )
     features["crit_bp_x_hypertension"] = (
-        features["is_bp_sys_critically_high"]
-        * last_ctx.get("has_hypertension", 0)
+        features["is_bp_sys_critically_high"] * features.get("has_hypertension", 0)
     )
 
     return features
 
 
 def prepare_training_data(scenarios):
-    """تحول السيناريوهات إلى X (DataFrame) و y (Series) جاهزة تماماً لتدريب الـ
-
-    Random Forest دون أي أخطاء توافقية.
-    """
+    """تحول السيناريوهات إلى X (DataFrame) و y (Series) جاهزة للتدريب."""
     X = []
     y = []
     window_size = 6
 
     for scenario in scenarios:
-        # إصلاح الثغرة الأولى: إضافة +1 لضمان شمول النقطة الأخيرة وعدم تجاهل السيناريوهات ذات الـ 6 نقاط
         for i in range(window_size, len(scenario) + 1):
             window = [ctx for ctx, _ in scenario[i - window_size : i]]
-            label = scenario[i - 1][1]  # جلب الـ label الخاص بآخر عنصر في النافذة
+            label = scenario[i - 1][1]
 
             feats = extract_features_from_window(window)
             if feats:
                 X.append(feats)
                 y.append(label)
 
-    # إصلاح الثغرة الثانية: التحويل لـ DataFrame و Series لتغذية مكتبة sklearn مباشرة
     return pd.DataFrame(X), pd.Series(y)

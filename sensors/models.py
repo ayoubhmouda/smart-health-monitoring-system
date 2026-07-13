@@ -1,5 +1,7 @@
 from django.db import models
 from core.models import Patient, Elderly, Disabled
+from django.utils import timezone
+
 
 class SensorType(models.Model):
     class Category(models.TextChoices):
@@ -74,7 +76,7 @@ class SensorReading(models.Model):
     sensor = models.ForeignKey(Sensor, on_delete=models.CASCADE, related_name='readings')
     value = models.FloatField()
     source = models.CharField(max_length=10, choices=Source.choices)
-    recorded_at = models.DateTimeField(auto_now_add=True)
+    recorded_at = models.DateTimeField(default=timezone.now)
     raw_payload = models.JSONField(default=dict, blank=True, null=True)
 
     def __str__(self):

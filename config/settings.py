@@ -42,10 +42,14 @@ INSTALLED_APPS = [
     'notifications',
     'dashboard',
     'rest_framework',
+    'rest_framework.authtoken',
     'api',
+    'corsheaders',
+    'django_filters',
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -54,6 +58,8 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+CORS_ALLOW_ALL_ORIGINS = True 
 
 ROOT_URLCONF = 'config.urls'
 
@@ -155,4 +161,17 @@ CELERY_BEAT_SCHEDULE = {
     'task': 'context.tasks.aggregate_all_contexts',
     'schedule': 30.0,
     },
+}
+
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.TokenAuthentication',
+    ],
+    
+    'DEFAULT_FILTER_BACKENDS': [
+        'django_filters.rest_framework.DjangoFilterBackend',
+    ],
+
+    'DEFAULT_PAGINATION_CLASS': None,  # ← أضف هذا السطر لإلغاء التقسيم مؤقتاً
 }

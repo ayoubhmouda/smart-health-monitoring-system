@@ -9,17 +9,15 @@ import os
 def train_and_save_model():
     print("Generating training scenarios...")
     generator = ClinicalScenarioGenerator()
-    all_scenarios = generator.generate_mixed_scenarios(num_each=30)  # 30 من كل نوع
+    all_scenarios = generator.generate_mixed_scenarios(num_each=30)
 
     print(f"Total data points: {len(all_scenarios)}")
-    X, y = prepare_training_data(all_scenarios)
-
-    # تحويل الميزات من قواميس إلى مصفوفة
-    import pandas as pd
-    X_df = pd.DataFrame(X)
+    
+    # ✅ التعديل: prepare_training_data أصبحت ترجع (pd.DataFrame, pd.Series) مباشرة
+    X_df, y_series = prepare_training_data(all_scenarios)
     feature_names = X_df.columns.tolist()
 
-    X_train, X_test, y_train, y_test = train_test_split(X_df, y, test_size=0.2, random_state=42)
+    X_train, X_test, y_train, y_test = train_test_split(X_df, y_series, test_size=0.2, random_state=42)
 
     print("Training Random Forest...")
     model = RandomForestClassifier(n_estimators=100, random_state=42)

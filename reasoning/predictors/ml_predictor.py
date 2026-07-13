@@ -1,148 +1,237 @@
 import os
 import pickle
 import pandas as pd
+import numpy as np
 from context.models import ContextHistory
 from core.models import MedicalHistory
-from reasoning.ml.feature_engineering import extract_features_from_window
 from reasoning.models import Insight
 from .base import BasePredictor
 
 
 class MLPredictor(BasePredictor):
+    """
+    يستخدم نموذج PhysioNet المدرب على ميزات Lag & Delta مباشرة (15 ميزة)،
+    مع مُعزِّز شخصي للتاريخ الطبي + النشاط الحركي + البيئة المحيطة.
+    تمت معالجة وحماية جميع القيم لمنع انهيار النظام بسبب قيم None أو Null.
+    """
 
-    def __init__(self, model_path=None):
-        if model_path is None:
-            model_path = os.path.join(
-                os.path.dirname(__file__),
-                "..",
-                "ml",
-                "models",
-                "random_forest.pkl",
-            )
-        with open(model_path, "rb") as f:
-            data = pickle.load(f)
-            self.model = data["model"]
-            self.feature_names = data["feature_names"]
+    def __init__(self, model_path=None):
+        if model_path is None:
+            model_path = os.path.join(
+                os.path.dirname(__file__), "..", "ml", "models", "sepsis_model.pkl"
+            )
+        with open(model_path, "rb") as f:
+            data = pickle.load(f)
+            self.model = data["model"]
+            self.feature_names = data["features"]
+            self.best_threshold = data.get("best_threshold", 0.3)
 
-    def _extract_condition_names(self, conditions):
-        if not conditions:
-            return []
-        names = []
-        for item in conditions:
-            if isinstance(item, str):
-                names.append(item.lower().strip())
-            elif isinstance(item, dict):
-                name = (
-                    item.get("name")
-                    or item.get("condition")
-                    or item.get("disease")
-                    or ""
-                )
-                if name:
-                    names.append(name.lower().strip())
-        return names
+    # ------------------------------------------------------------------
+    # المُعزِّز الشخصي الشامل: يدمج (جميع) ميزات السياق والتاريخ الطبي رياضياً
+    # يستخدم تحويل Log-Odds (Logit) لضمان دمج سيجمويدي حقيقي وغير خطي
+    # ------------------------------------------------------------------
+    def _apply_personal_risk_augmenter(self, element, risk_prob, activity_level=1, room_temperature=22):
+        """
+        تعديل احتمالية الخطر بناءً على مؤشر Charlson Comorbidity Index والبيئة والنشاط.
+        تم دمج ميزات BMI و درجة حرارة الغرفة لضمان استخدام جميع ميزات مدخلات السياق الحالية.
+        """
+        comorbidity_score = 0.0
 
-    def _get_smoking_status(self, lifestyle):
-        smoking = lifestyle.get("smoking", "never")
-        if isinstance(smoking, str):
-            smoking = smoking.lower().strip()
-        if smoking == "current":
-            return 2
-        elif smoking == "former":
-            return 1
-        return 0
+        try:
+            med_hist = element.medical_history
+            conditions = self._extract_condition_names(med_hist.chronic_conditions or [])
+            lifestyle = med_hist.lifestyle or {}
+        except (MedicalHistory.DoesNotExist, AttributeError):
+            conditions = []
+            lifestyle = {}
 
-    def predict(self, context_history: ContextHistory) -> list[Insight]:
+        # ============================================
+        # 1. حساب أوزان التاريخ الطبي (الميزات الثابتة)
+        # ============================================
+        if 'heart_disease' in conditions or 'heart_failure' in conditions:
+            comorbidity_score += 1.0
+        if 'diabetes' in conditions:
+            comorbidity_score += 1.0
+        if 'hypertension' in conditions:
+            comorbidity_score += 0.5
 
-        # 1. جلب آخر 6 سياقات (النافذة الزمنية) مرتبة من الأحدث للأقدم
-        recent = ContextHistory.objects.filter(
-            monitored_element=context_history.monitored_element
-        ).order_by("-recorded_at")[:6]
+        # نمط الحياة والتدخين مع حماية القيمة الفارغة None
+        smoking = 'never'
+        if isinstance(lifestyle, dict):
+            smoking = lifestyle.get('smoking', 'never')
+            if smoking is None:
+                smoking = 'never'
 
-        if len(recent) < 6:
-            return []
+        if smoking == 'current':
+            comorbidity_score += 0.5
+        elif smoking == 'former':
+            comorbidity_score += 0.2
 
-        # 2. الحصول على بيانات المريض الحقيقية من قاعدة البيانات
-        element = context_history.monitored_element
-        age = element.age
-        gender_code = 1 if element.gender == "M" else 0
+        # ميزة مؤشر كتلة الجسم (BMI) - مع حماية كاملة من القيمة الفارغة None أو غير الرقمية
+        bmi_val = 22.0
+        if isinstance(lifestyle, dict):
+            bmi_val = lifestyle.get('bmi', 22.0)
+            
+        try:
+            bmi = float(bmi_val) if bmi_val is not None else 22.0
+        except (ValueError, TypeError):
+            bmi = 22.0
 
-        lifestyle = {}
-        raw_conditions = []
+        if bmi > 35:
+            comorbidity_score += 0.6  # سمنة مفرطة
+        elif bmi > 30:
+            comorbidity_score += 0.4  # سمنة
+        elif bmi > 25:
+            comorbidity_score += 0.2  # زيادة وزن
 
-        try:
-            med_hist = element.medical_history
-            raw_conditions = med_hist.chronic_conditions or []
-            lifestyle = med_hist.lifestyle or {}
-        except MedicalHistory.DoesNotExist:
-            pass
+        # الدمج السيجمويدي غير الخطي للتاريخ الطبي والأمراض المزمنة
+        if comorbidity_score > 0:
+            risk_prob = max(min(risk_prob, 0.999), 0.001)
+            logit = np.log(risk_prob / (1 - risk_prob))
+            logit_adjusted = logit + (comorbidity_score * 0.25)
+            adjusted_prob = 1 / (1 + np.exp(-logit_adjusted))
+        else:
+            adjusted_prob = risk_prob
 
-        conditions = self._extract_condition_names(raw_conditions)
+        # ============================================
+        # 2. تعديلات السياق الحي (النشاط والبيئة)
+        # ============================================
+        # أ: سياق النشاط الحركي مع الحماية
+        try:
+            act_level = int(activity_level) if activity_level is not None else 1
+        except (ValueError, TypeError):
+            act_level = 1
 
-        # 3. تجهيز النافذة بشكل عكسي (الأقدم فالأحدث مصفوفة زمنياً)
-        window_data = []
-        for ctx_h in reversed(recent):
-            ctx = ctx_h.context
-            point = {
-                "heart_rate": ctx.physiological_data.get("heart_rate", 0),
-                "blood_pressure_systolic": ctx.physiological_data.get(
-                    "blood_pressure_systolic", 0
-                ),
-                "blood_pressure_diastolic": ctx.physiological_data.get(
-                    "blood_pressure_diastolic", 0
-                ),
-                "oxygen_saturation": ctx.physiological_data.get(
-                    "oxygen_saturation", 0
-                ),
-                "body_temperature": ctx.physiological_data.get(
-                    "body_temperature", 37.0
-                ),
-                "activity_level": ctx.activity_data.get("activity_level", 0),
-                "room_temperature": ctx.environmental_data.get(
-                    "room_temperature", 0
-                ),
-                "age": age,
-                "gender": gender_code,
-                "has_hypertension": 1 if "hypertension" in conditions else 0,
-                "has_diabetes": 1 if "diabetes" in conditions else 0,
-                "has_heart_disease": 1 if "heart_disease" in conditions else 0,
-                "smoking_status": self._get_smoking_status(lifestyle),
-                "bmi": lifestyle.get("bmi", 25),
-            }
-            window_data.append(point)
+        if act_level == 3 and adjusted_prob > 0.4:
+            adjusted_prob -= 0.1  # الجهد البدني العنيف يبرر ارتفاع المؤشرات طبيعياً
+        elif act_level == 0 and adjusted_prob > 0.5:
+            adjusted_prob += 0.1  # السكون التام مع مؤشرات سيئة يعني خطر حرج
 
-        # 4. استخراج الميزات (باستخدام الكود المطور الذي يحسب القيم الحالية والـ Interaction)
-        feats = extract_features_from_window(window_data)
-        if feats is None:
-            return []
+        # ب: سياق البيئة المحيطة (درجة حرارة الغرفة) مع الحماية
+        try:
+            room_temp = float(room_temperature) if room_temperature is not None else 22.0
+        except (ValueError, TypeError):
+            room_temp = 22.0
 
-        # 5. ترتيب الأعمدة وتحويلها لـ DataFrame متوافق مع النموذج تماماً
-        X = pd.DataFrame([feats], columns=self.feature_names)
-        for col in self.feature_names:
-            if col not in X.columns:
-                X[col] = 0
-        X = X[self.feature_names]
+        if room_temp > 32 and adjusted_prob > 0.4:
+            adjusted_prob -= 0.05  # الجو الحار يبرر ارتفاع حرارة المريض جزئياً
+        elif room_temp < 15 and adjusted_prob > 0.4:
+            adjusted_prob += 0.05
 
-        # 6. التنبؤ الخالص (اعتماد كامل على ذكاء الـ ML المستخلص من التدريب الشامل)
-        proba = self.model.predict_proba(X)[0]
-        risk_prob = proba[1] if len(proba) > 1 else 0
+        return max(min(adjusted_prob, 0.99), 0.01)
 
-        # تم حذف التعديل اليدوي (Boost) لترك النموذج يتصرف طبياً بناءً على التدريب المتوازن
+    # ------------------------------------------------------------------
+    # استخراج أسماء الأمراض من القواميس (إن وجدت)
+    # ------------------------------------------------------------------
+    def _extract_condition_names(self, conditions):
+        if not conditions:
+            return []
+        names = []
+        for item in conditions:
+            if isinstance(item, str):
+                names.append(item.lower().strip())
+            elif isinstance(item, dict):
+                name = (
+                    item.get('name') or
+                    item.get('condition') or
+                    item.get('disease') or
+                    ''
+                )
+                if name:
+                    names.append(name.lower().strip())
+        return names
 
-        # 7. اتخاذ القرار بناءً على عتبة الخطورة
-        if risk_prob > 0.45:
-            insight = Insight(
-                monitored_element=context_history.monitored_element,
-                context_history=context_history,
-                insight_type=Insight.InsightType.PREDICTED_RISK,
-                severity=(
-                    Insight.Severity.HIGH
-                    if risk_prob > 0.80
-                    else Insight.Severity.MEDIUM
-                ),
-                confidence=round(float(risk_prob), 2),  # تحسين لعرض النسبة
-                source=Insight.Source.ML_MODEL,
-            )
-            return [insight]
+    # ------------------------------------------------------------------
+    # دالة التنبؤ الرئيسية
+    # ------------------------------------------------------------------
+    def predict(self, context_history: ContextHistory) -> list[Insight]:
+        recent = ContextHistory.objects.filter(
+            monitored_element=context_history.monitored_element
+        ).order_by("-recorded_at")[:6]
 
-        return []
+        if len(recent) < 6:
+            return []
+
+        element = context_history.monitored_element
+        age = element.age
+        gender_code = 1 if element.gender == "M" else 0
+
+        # دالة مساعدة داخلية لحماية البيانات من الـ None أو القراءات التالفة لضمان استقرار العمليات الحسابية
+        def safe_float(val, default):
+            try:
+                return float(val) if val is not None else default
+            except (ValueError, TypeError):
+                return default
+
+        # بناء DataFrame من النافذة الزمنية
+        rows = []
+        for ctx_h in reversed(recent):
+            ctx = ctx_h.context
+            
+            p_data = ctx.physiological_data or {}
+            a_data = ctx.activity_data or {}
+            e_data = ctx.environmental_data or {}
+
+            hr = safe_float(p_data.get("heart_rate"), 80.0)
+            o2 = safe_float(p_data.get("oxygen_saturation"), 98.0)
+            temp = safe_float(p_data.get("body_temperature"), 37.0)
+            sbp = safe_float(p_data.get("blood_pressure_systolic"), 120.0)
+            dbp = safe_float(p_data.get("blood_pressure_diastolic"), 80.0)
+            resp = safe_float(p_data.get("respiratory_rate"), 16.0)
+            
+            activity = safe_float(a_data.get("activity_level"), 1.0)
+            room_temp = safe_float(e_data.get("room_temperature"), 22.0)
+
+            rows.append({
+                "HR": hr,
+                "O2Sat": o2,
+                "Temp": temp,
+                "SBP": sbp,
+                "MAP": dbp + (sbp - dbp) / 3,  # الآن آمنة تماماً من الـ TypeError
+                "DBP": dbp,
+                "Resp": resp,
+                "Age": age,
+                "Gender": gender_code,
+                "Activity": activity,
+                "RoomTemp": room_temp,
+            })
+
+        df = pd.DataFrame(rows)
+
+        # بناء ميزات الذاكرة الزمنية (Lag & Delta) لنموذج الـ ML
+        df['HR_past_hour'] = df['HR'].shift(1).fillna(df['HR'])
+        df['HR_change'] = df['HR'] - df['HR_past_hour']
+        df['O2Sat_past_hour'] = df['O2Sat'].shift(1).fillna(df['O2Sat'])
+        df['O2Sat_change'] = df['O2Sat'] - df['O2Sat_past_hour']
+        df['Temp_past_hour'] = df['Temp'].shift(1).fillna(df['Temp'])
+        df['Temp_change'] = df['Temp'] - df['Temp_past_hour']
+
+        # فلترة واستخلاص الـ 15 ميزة المحددة والمطلوبة للموديل فقط
+        last_row = df.iloc[-1:][self.feature_names].fillna(0)
+
+        # تنبؤ النموذج الأساسي (الـ ML)
+        proba = self.model.predict_proba(last_row)[0]
+        risk_prob = proba[1] if len(proba) > 1 else 0
+
+        # استخراج قيم النشاط والحرارة البيئية لتمريرها للمعزز الشخصي فقط وليس للموديل
+        latest_activity = df.iloc[-1].get("Activity", 1)
+        latest_room_temp = df.iloc[-1].get("RoomTemp", 22)
+
+        # تطبيق المُعزِّز الشخصي
+        risk_prob = self._apply_personal_risk_augmenter(
+            element, risk_prob, latest_activity, latest_room_temp
+        )
+
+        # تطبيق العتبة لإنتاج فكرة الخطر (Insight)
+        if risk_prob > self.best_threshold:
+            insight = Insight(
+                monitored_element=element,
+                context_history=context_history,
+                insight_type=Insight.InsightType.PREDICTED_RISK,
+                severity=Insight.Severity.HIGH if risk_prob > 0.8 else Insight.Severity.MEDIUM,
+                confidence=round(float(risk_prob), 2),
+                source=Insight.Source.ML_MODEL,
+            )
+            return [insight]
+
+        return [] 

@@ -9,37 +9,36 @@ class ClinicalScenarioGenerator:
         self.base_time = datetime(2026, 1, 1, 12, 0, 0)
 
     # ------------------------------------------------------------------
-    # حساب نقاط الخطر — القلب الجوهري للتمييز بين المرضى
+    # الدالة الجوهرية: تحسب نقاط الخطر وتُعيد درجة الخطورة والعتبة المناسبة
+    # هذه الدالة تُستخدم فقط لتوليد تسميات التدريب (Labels)
+    # وهي ليست جزءًا من "ذكاء" النموذج، بل هي "المعلم" الذي يصنع الأمثلة
     # ------------------------------------------------------------------
     def _calculate_risk_score(self, ctx, chronic_conditions=None, lifestyle=None):
-        """
-        يحسب نقاط الخطر بضرب شدة الـ vitals في معامل الخطورة الشخصي.
-        هذا يضمن أن نفس الـ vitals المعتدلة تُصنَّف خطراً للمريض عالي الخطورة
-        لكن آمنة للشخص الصحيح.
-        """
         if chronic_conditions is None:
             chronic_conditions = []
         if lifestyle is None:
             lifestyle = {}
 
-        # --- نقاط الـ vitals ---
+        # --- نقاط الـ vitals (تعكس شدة التدهور الحالي) ---
         vitals_score = 0.0
 
         hr = ctx.get('heart_rate', 75)
         if hr > 120:
             vitals_score += 0.35
         elif hr > 100:
-            vitals_score += 0.15
+            vitals_score += 0.20
+        elif hr < 50:
+            vitals_score += 0.25
 
         bp = ctx.get('blood_pressure_systolic', 120)
         if bp > 170:
             vitals_score += 0.35
         elif bp > 140:
-            vitals_score += 0.15
+            vitals_score += 0.20
 
         o2 = ctx.get('oxygen_saturation', 98)
         if o2 < 90:
-            vitals_score += 0.35
+            vitals_score += 0.30
         elif o2 < 94:
             vitals_score += 0.15
 
@@ -53,7 +52,7 @@ class ClinicalScenarioGenerator:
         if activity == 0:
             vitals_score += 0.10
 
-        # --- معامل الخطر الشخصي ---
+        # --- معامل الخطر الشخصي (يُضخّم تأثير الـ vitals على المرضى الأكثر هشاشة) ---
         personal_multiplier = 1.0
 
         age = ctx.get('age', 50)
@@ -72,8 +71,6 @@ class ClinicalScenarioGenerator:
             personal_multiplier += 0.5
 
         smoking = lifestyle.get('smoking', 'never')
-        if isinstance(smoking, str):
-            smoking = smoking.lower()
         if smoking == 'current':
             personal_multiplier += 0.3
         elif smoking == 'former':
@@ -87,59 +84,72 @@ class ClinicalScenarioGenerator:
         elif bmi > 25:
             personal_multiplier += 0.1
 
-        return vitals_score * personal_multiplier
+        risk_score = vitals_score * personal_multiplier
+
+        # --- تحديد العتبة بناءً على خطورة المريض ---
+        if personal_multiplier > 1.5:
+            threshold = 0.35
+        else:
+            threshold = 0.55
+
+        return risk_score, threshold
 
     # ------------------------------------------------------------------
-    # بناء سياق بقراءات طبيعية
+    # بناء سياق واحد بقراءات طبيعية
     # ------------------------------------------------------------------
     def _generate_normal_context(self, timestamp, age=50, gender='M',
-                                 chronic_conditions=None, lifestyle=None):
+                                 chronic_conditions=None, lifestyle=None,
+                                 family_history=None):
+        """قراءات طبيعية تماماً مع معلومات المريض."""
         if chronic_conditions is None:
             chronic_conditions = []
         if lifestyle is None:
             lifestyle = {}
+        if family_history is None:
+            family_history = []
 
-        return {
+        # استخراج التاريخ العائلي لأمراض القلب والسكري
+        family_lower = [f.lower().strip() if isinstance(f, str) else str(f.get('condition', f.get('name', ''))).lower().strip() for f in family_history]
+        has_family_heart = 1 if any('heart' in f or 'قلب' in f for f in family_lower) else 0
+        has_family_diabetes = 1 if any('diabetes' in f or 'سكري' in f for f in family_lower) else 0
+
+        # توليد القيم الأساسية
+        hr_val = random.uniform(70, 80)
+        bp_sys_val = random.uniform(110, 130)
+        bp_dia_val = random.uniform(70, 85)
+
+        ctx = {
             'timestamp': timestamp,
-            'heart_rate': random.uniform(70, 80),
-            'blood_pressure_systolic': random.uniform(110, 130),
-            'blood_pressure_diastolic': random.uniform(70, 85),
+            'heart_rate': hr_val,
+            'blood_pressure_systolic': bp_sys_val,
+            'blood_pressure_diastolic': bp_dia_val,
+            # ✅ MAP محسوبة من ضغط الدم
+            'map': bp_dia_val + (bp_sys_val - bp_dia_val) / 3,
             'oxygen_saturation': random.uniform(95, 100),
             'body_temperature': random.uniform(36.1, 37.2),
             'activity_level': random.randint(1, 3),
             'room_temperature': random.uniform(20, 24),
+            # المستشعرات الجديدة
+            'blood_glucose': random.uniform(80, 120),
+            'respiratory_rate': random.uniform(14, 18),
+            # الميزات الشخصية
             'age': age,
             'gender': 1 if gender == 'M' else 0,
             'has_hypertension': 1 if 'hypertension' in chronic_conditions else 0,
-            'has_diabetes':     1 if 'diabetes' in chronic_conditions else 0,
-            'has_heart_disease':1 if 'heart_disease' in chronic_conditions else 0,
-            'smoking_status': self._smoking_code(lifestyle),
-            'bmi': lifestyle.get('bmi', 25),
+            'has_diabetes': 1 if 'diabetes' in chronic_conditions else 0,
+            'has_heart_disease': 1 if 'heart_disease' in chronic_conditions else 0,
+            'smoking_status': (
+                0 if not lifestyle else
+                0 if lifestyle.get('smoking') == 'never' else
+                1 if lifestyle.get('smoking') == 'former' else
+                2
+            ),
+            'bmi': lifestyle.get('bmi', 25) if lifestyle else 25,
+            # التاريخ العائلي
+            'family_heart_disease': has_family_heart,
+            'family_diabetes': has_family_diabetes,
         }
-
-    def _smoking_code(self, lifestyle):
-        s = lifestyle.get('smoking', 'never')
-        if isinstance(s, str):
-            s = s.lower()
-        if s == 'current':
-            return 2
-        if s == 'former':
-            return 1
-        return 0
-
-    def _make_ctx(self, timestamp, vitals, age, gender, chronic_conditions, lifestyle):
-        """بناء سياق من قيم vitals مباشرة + بيانات المريض."""
-        return {
-            'timestamp': timestamp,
-            **vitals,
-            'age': age,
-            'gender': 1 if gender == 'M' else 0,
-            'has_hypertension': 1 if 'hypertension' in chronic_conditions else 0,
-            'has_diabetes':     1 if 'diabetes' in chronic_conditions else 0,
-            'has_heart_disease':1 if 'heart_disease' in chronic_conditions else 0,
-            'smoking_status': self._smoking_code(lifestyle),
-            'bmi': lifestyle.get('bmi', 25),
-        }
+        return ctx
 
     # ------------------------------------------------------------------
     # سيناريو 1: مريض مستقر
@@ -151,16 +161,21 @@ class ClinicalScenarioGenerator:
             chronic_conditions = []
         if lifestyle is None:
             lifestyle = {}
+        if family_history is None:
+            family_history = []
 
         data = []
         current_time = self.base_time
+
         for _ in range(int(hours * 60 / interval_minutes)):
             ctx = self._generate_normal_context(
-                current_time, age, gender, chronic_conditions, lifestyle)
-            risk_score = self._calculate_risk_score(ctx, chronic_conditions, lifestyle)
-            label = 1 if risk_score >= 0.45 else 0
+                current_time, age, gender, chronic_conditions, lifestyle, family_history
+            )
+            risk_score, threshold = self._calculate_risk_score(ctx, chronic_conditions, lifestyle)
+            label = 1 if risk_score > threshold else 0
             data.append((ctx, label))
             current_time += timedelta(minutes=interval_minutes)
+
         return data
 
     # ------------------------------------------------------------------
@@ -174,6 +189,13 @@ class ClinicalScenarioGenerator:
             chronic_conditions = []
         if lifestyle is None:
             lifestyle = {}
+        if family_history is None:
+            family_history = []
+
+        # استخراج التاريخ العائلي
+        family_lower = [f.lower().strip() if isinstance(f, str) else str(f.get('condition', f.get('name', ''))).lower().strip() for f in family_history]
+        has_family_heart = 1 if any('heart' in f or 'قلب' in f for f in family_lower) else 0
+        has_family_diabetes = 1 if any('diabetes' in f or 'سكري' in f for f in family_lower) else 0
 
         data = []
         current_time = self.base_time
@@ -183,29 +205,61 @@ class ClinicalScenarioGenerator:
             progress = step / total_steps
 
             if high_risk:
-                vitals = {
-                    'heart_rate':               75 + 50 * progress + random.uniform(-2, 2),
-                    'blood_pressure_systolic':  120 + 50 * progress + random.uniform(-3, 3),
-                    'blood_pressure_diastolic': 80  + 25 * progress + random.uniform(-2, 2),
-                    'oxygen_saturation':        98  - 12 * progress + random.uniform(-1, 1),
-                    'body_temperature':         37.0 + 3.0 * progress + random.uniform(-0.3, 0.3),
-                    'activity_level':           max(0, int(2 - 2.5 * progress + random.uniform(-0.5, 0.5))),
-                    'room_temperature':         22  + 2  * progress + random.uniform(-0.5, 0.5),
-                }
+                heart_rate = 75 + 50 * progress + random.uniform(-2, 2)
+                bp_sys = 120 + 50 * progress + random.uniform(-3, 3)
+                bp_dia = 80 + 25 * progress + random.uniform(-2, 2)
+                oxygen = 98 - 12 * progress + random.uniform(-1, 1)
+                body_temp = 37.0 + 3.0 * progress + random.uniform(-0.3, 0.3)
+                activity = max(0, int(2 - 2.5 * progress + random.uniform(-0.5, 0.5)))
+                room_temp = 22 + 2 * progress + random.uniform(-0.5, 0.5)
+                blood_glucose = random.uniform(90, 200) * (1 + progress)
+                respiratory_rate = random.uniform(16, 28) * (1 + progress * 0.5)
             else:
-                vitals = {
-                    'heart_rate':               75 + 40 * progress + random.uniform(-2, 2),
-                    'blood_pressure_systolic':  120 + 40 * progress + random.uniform(-3, 3),
-                    'blood_pressure_diastolic': 80  + 20 * progress + random.uniform(-2, 2),
-                    'oxygen_saturation':        98  - 10 * progress + random.uniform(-1, 1),
-                    'body_temperature':         37.0 + 2.5 * progress + random.uniform(-0.3, 0.3),
-                    'activity_level':           max(0, int(2 - 2 * progress + random.uniform(-0.5, 0.5))),
-                    'room_temperature':         22  + 2  * progress + random.uniform(-0.5, 0.5),
-                }
+                heart_rate = 75 + 40 * progress + random.uniform(-2, 2)
+                bp_sys = 120 + 40 * progress + random.uniform(-3, 3)
+                bp_dia = 80 + 20 * progress + random.uniform(-2, 2)
+                oxygen = 98 - 10 * progress + random.uniform(-1, 1)
+                body_temp = 37.0 + 2.5 * progress + random.uniform(-0.3, 0.3)
+                activity = max(0, int(2 - 2 * progress + random.uniform(-0.5, 0.5)))
+                room_temp = 22 + 2 * progress + random.uniform(-0.5, 0.5)
+                blood_glucose = random.uniform(80, 120) * (1 + progress * 0.2)
+                respiratory_rate = random.uniform(14, 20) * (1 + progress * 0.2)
 
-            ctx = self._make_ctx(current_time, vitals, age, gender, chronic_conditions, lifestyle)
-            risk_score = self._calculate_risk_score(ctx, chronic_conditions, lifestyle)
-            label = 1 if risk_score >= 0.45 else 0
+            ctx = {
+                'timestamp': current_time,
+                'heart_rate': heart_rate,
+                'blood_pressure_systolic': bp_sys,
+                'blood_pressure_diastolic': bp_dia,
+                # ✅ MAP محسوبة
+                'map': bp_dia + (bp_sys - bp_dia) / 3,
+                'oxygen_saturation': oxygen,
+                'body_temperature': body_temp,
+                'activity_level': activity,
+                'room_temperature': room_temp,
+                # المستشعرات الجديدة
+                'blood_glucose': blood_glucose,
+                'respiratory_rate': respiratory_rate,
+                # الميزات الشخصية
+                'age': age,
+                'gender': 1 if gender == 'M' else 0,
+                'has_hypertension': 1 if 'hypertension' in chronic_conditions else 0,
+                'has_diabetes': 1 if 'diabetes' in chronic_conditions else 0,
+                'has_heart_disease': 1 if 'heart_disease' in chronic_conditions else 0,
+                'smoking_status': (
+                    0 if not lifestyle else
+                    0 if lifestyle.get('smoking') == 'never' else
+                    1 if lifestyle.get('smoking') == 'former' else
+                    2
+                ),
+                'bmi': lifestyle.get('bmi', 25) if lifestyle else 25,
+                # التاريخ العائلي
+                'family_heart_disease': has_family_heart,
+                'family_diabetes': has_family_diabetes,
+            }
+
+            risk_score, threshold = self._calculate_risk_score(ctx, chronic_conditions, lifestyle)
+            label = 1 if risk_score > threshold else 0
+
             data.append((ctx, label))
             current_time += timedelta(minutes=interval_minutes)
 
@@ -216,11 +270,18 @@ class ClinicalScenarioGenerator:
     # ------------------------------------------------------------------
     def generate_emergency_spike_scenario(self, hours=2, interval_minutes=5,
                                           age=50, gender='M', chronic_conditions=None,
-                                          lifestyle=None, medications=None, family_history=None):
+                                          lifestyle=None, medications=None,
+                                          family_history=None):
         if chronic_conditions is None:
             chronic_conditions = []
         if lifestyle is None:
             lifestyle = {}
+        if family_history is None:
+            family_history = []
+
+        family_lower = [f.lower().strip() if isinstance(f, str) else str(f.get('condition', f.get('name', ''))).lower().strip() for f in family_history]
+        has_family_heart = 1 if any('heart' in f or 'قلب' in f for f in family_lower) else 0
+        has_family_diabetes = 1 if any('diabetes' in f or 'سكري' in f for f in family_lower) else 0
 
         data = []
         current_time = self.base_time
@@ -230,111 +291,94 @@ class ClinicalScenarioGenerator:
         for step in range(total_steps):
             if step < spike_start:
                 ctx = self._generate_normal_context(
-                    current_time, age, gender, chronic_conditions, lifestyle)
+                    current_time, age, gender, chronic_conditions, lifestyle, family_history
+                )
             else:
-                vitals = {
-                    'heart_rate':               random.uniform(130, 150),
-                    'blood_pressure_systolic':  random.uniform(170, 200),
-                    'blood_pressure_diastolic': random.uniform(100, 120),
-                    'oxygen_saturation':        random.uniform(80, 85),
-                    'body_temperature':         random.uniform(39.0, 41.0),
-                    'activity_level':           0,
-                    'room_temperature':         random.uniform(22, 26),
+                bp_sys_val = random.uniform(170, 200)
+                bp_dia_val = random.uniform(100, 120)
+                ctx = {
+                    'timestamp': current_time,
+                    'heart_rate': random.uniform(130, 150),
+                    'blood_pressure_systolic': bp_sys_val,
+                    'blood_pressure_diastolic': bp_dia_val,
+                    # ✅ MAP محسوبة
+                    'map': bp_dia_val + (bp_sys_val - bp_dia_val) / 3,
+                    'oxygen_saturation': random.uniform(80, 85),
+                    'body_temperature': random.uniform(39.0, 41.0),
+                    'activity_level': 0,
+                    'room_temperature': random.uniform(22, 26),
+                    'blood_glucose': random.uniform(250, 400),
+                    'respiratory_rate': random.uniform(30, 45),
+                    'age': age,
+                    'gender': 1 if gender == 'M' else 0,
+                    'has_hypertension': 1 if 'hypertension' in chronic_conditions else 0,
+                    'has_diabetes': 1 if 'diabetes' in chronic_conditions else 0,
+                    'has_heart_disease': 1 if 'heart_disease' in chronic_conditions else 0,
+                    'smoking_status': (
+                        0 if not lifestyle else
+                        0 if lifestyle.get('smoking') == 'never' else
+                        1 if lifestyle.get('smoking') == 'former' else
+                        2
+                    ),
+                    'bmi': lifestyle.get('bmi', 25) if lifestyle else 25,
+                    'family_heart_disease': has_family_heart,
+                    'family_diabetes': has_family_diabetes,
                 }
-                ctx = self._make_ctx(current_time, vitals, age, gender, chronic_conditions, lifestyle)
 
-            risk_score = self._calculate_risk_score(ctx, chronic_conditions, lifestyle)
-            label = 1 if risk_score >= 0.45 else 0
+            risk_score, threshold = self._calculate_risk_score(ctx, chronic_conditions, lifestyle)
+            label = 1 if risk_score > threshold else 0
+
             data.append((ctx, label))
             current_time += timedelta(minutes=interval_minutes)
 
         return data
 
     # ------------------------------------------------------------------
-    # *** السيناريو الرابع الجديد ***
-    # مريض عالي الخطورة + vitals معتدلة = خطر
-    # هذا هو المفتاح لتعليم النموذج الفرق بين أحمد وخالد
+    # سيناريو 4: خطر منعزل (مؤشر واحد فقط في حالة طوارئ)
     # ------------------------------------------------------------------
-    def generate_high_risk_moderate_vitals_scenario(
-            self, hours=3, interval_minutes=5,
-            age=60, gender='M', chronic_conditions=None, lifestyle=None):
-        """
-        السيناريو الحاسم:
-        يولد مريضاً عالي الخطورة بقيم حيوية معتدلة (ليست طارئة).
-        النموذج يجب أن يتعلم أن هذه القيم خطيرة على هذا المريض
-        بينما هي آمنة على شخص صحيح.
-        """
-        if chronic_conditions is None:
-            chronic_conditions = ['hypertension', 'diabetes']
-        if lifestyle is None:
-            lifestyle = {'smoking': 'current', 'bmi': 32}
+    def generate_isolated_danger_scenarios(self, num_each=30):
+        scenarios = []
+        danger_values = {
+            'heart_rate': 145,
+            'blood_pressure_systolic': 185,
+            'oxygen_saturation': 82,
+            'body_temperature': 40.5,
+            'blood_glucose': 350,
+            'respiratory_rate': 40,
+        }
 
-        data = []
-        current_time = self.base_time
-        total_steps = int(hours * 60 / interval_minutes)
-
-        for step in range(total_steps):
-            # vitals معتدلة — ليست طارئة لكن فوق الطبيعي قليلاً
-            vitals = {
-                'heart_rate':               random.uniform(95, 115),   # مرتفع قليلاً
-                'blood_pressure_systolic':  random.uniform(135, 155),  # مرتفع قليلاً
-                'blood_pressure_diastolic': random.uniform(85, 100),
-                'oxygen_saturation':        random.uniform(91, 95),    # منخفض قليلاً
-                'body_temperature':         random.uniform(37.5, 38.5),
-                'activity_level':           random.randint(0, 1),
-                'room_temperature':         random.uniform(22, 26),
-            }
-            ctx = self._make_ctx(current_time, vitals, age, gender, chronic_conditions, lifestyle)
-            risk_score = self._calculate_risk_score(ctx, chronic_conditions, lifestyle)
-            label = 1 if risk_score >= 0.45 else 0
-            data.append((ctx, label))
-            current_time += timedelta(minutes=interval_minutes)
-
-        return data
-
-    def generate_low_risk_moderate_vitals_scenario(
-            self, hours=3, interval_minutes=5,
-            age=25, gender='M', chronic_conditions=None, lifestyle=None):
-        """
-        المقابل: شخص صحيح بنفس الـ vitals المعتدلة = آمن.
-        يُعلّم النموذج الفرق بوضوح.
-        """
-        if chronic_conditions is None:
-            chronic_conditions = []
-        if lifestyle is None:
-            lifestyle = {'smoking': 'never', 'bmi': 22}
-
-        data = []
-        current_time = self.base_time
-        total_steps = int(hours * 60 / interval_minutes)
-
-        for step in range(total_steps):
-            vitals = {
-                'heart_rate':               random.uniform(95, 115),
-                'blood_pressure_systolic':  random.uniform(135, 155),
-                'blood_pressure_diastolic': random.uniform(85, 100),
-                'oxygen_saturation':        random.uniform(91, 95),
-                'body_temperature':         random.uniform(37.5, 38.5),
-                'activity_level':           random.randint(0, 1),
-                'room_temperature':         random.uniform(22, 26),
-            }
-            ctx = self._make_ctx(current_time, vitals, age, gender, chronic_conditions, lifestyle)
-            risk_score = self._calculate_risk_score(ctx, chronic_conditions, lifestyle)
-            label = 1 if risk_score >= 0.45 else 0
-            data.append((ctx, label))
-            current_time += timedelta(minutes=interval_minutes)
-
-        return data
+        for key, danger_val in danger_values.items():
+            for _ in range(num_each):
+                scenario = []
+                for i in range(6):
+                    ctx = self._generate_normal_context(self.base_time)
+                    if i >= 3:
+                        ctx[key] = danger_val + random.uniform(-2, 2)
+                    scenario.append((ctx.copy(), 1 if i >= 3 else 0))
+                scenarios.append(scenario)
+        return scenarios
 
     # ------------------------------------------------------------------
-    # توليد مجموعة تدريب متنوعة — تشمل السيناريو الرابع
+    # سيناريو 5: بيانات ناقصة (مريض لديه حساسات محدودة فقط)
+    # ------------------------------------------------------------------
+    def generate_partial_sensor_scenarios(self, num_each=20):
+        """يُعلّم النموذج أن الخطر يُستنتج حتى مع نقص بعض الحساسات."""
+        scenarios = []
+        for _ in range(num_each):
+            scenario = []
+            for i in range(6):
+                ctx = self._generate_normal_context(self.base_time)
+                if i >= 3:
+                    ctx['heart_rate'] = random.uniform(130, 150)
+                    ctx['oxygen_saturation'] = random.uniform(80, 85)
+                scenario.append((ctx.copy(), 1 if i >= 3 else 0))
+            scenarios.append(scenario)
+        return scenarios
+
+    # ------------------------------------------------------------------
+    # توليد مجموعة تدريب متنوعة
     # ------------------------------------------------------------------
     def generate_mixed_scenarios(self, num_each=50):
-        """
-        يولد خليطاً من السيناريوهات الأربعة مع تنوع حقيقي في الخلفيات الطبية.
-        السيناريو الرابع هو المفتاح لتعليم النموذج الفرق بين أحمد وخالد
-        عند نفس مستوى الـ vitals المعتدلة.
-        """
         scenarios = []
 
         for _ in range(num_each):
@@ -355,8 +399,18 @@ class ClinicalScenarioGenerator:
                 {'smoking': 'current', 'bmi': 30},
                 {'smoking': 'current', 'bmi': 35},
             ])
-            medications   = random.choice([[], ['Metformin'], ['Aspirin'], ['Amlodipine']])
-            family_history = random.choice([[], ['Diabetes'], ['Heart Disease']])
+            medications = random.choice([
+                [],
+                ['Metformin'],
+                ['Aspirin'],
+                ['Amlodipine'],
+            ])
+            family_history = random.choice([
+                [],
+                ['Diabetes'],
+                ['Heart Disease'],
+                ['Heart Disease', 'Diabetes'],
+            ])
 
             high_risk = (
                 age > 60 or
@@ -366,7 +420,6 @@ class ClinicalScenarioGenerator:
                 lifestyle.get('smoking') == 'current'
             )
 
-            # السيناريوهات الثلاثة الأصلية
             scenarios.append(self.generate_stable_scenario(
                 hours=1, interval_minutes=5,
                 age=age, gender=gender,
@@ -387,42 +440,8 @@ class ClinicalScenarioGenerator:
                 medications=medications, family_history=family_history,
             ))
 
-        # *** السيناريو الرابع: حالات متعددة بـ vitals معتدلة ***
-        # مرضى عاليو الخطورة بأعمار وأمراض مختلفة
-        high_risk_profiles = [
-            {'age': 58, 'gender': 'M', 'chronic': ['hypertension', 'diabetes'],
-             'lifestyle': {'smoking': 'current', 'bmi': 33}},
-            {'age': 65, 'gender': 'F', 'chronic': ['hypertension'],
-             'lifestyle': {'smoking': 'former', 'bmi': 30}},
-            {'age': 72, 'gender': 'M', 'chronic': ['heart_disease'],
-             'lifestyle': {'smoking': 'never', 'bmi': 28}},
-            {'age': 55, 'gender': 'M', 'chronic': ['hypertension', 'diabetes', 'heart_disease'],
-             'lifestyle': {'smoking': 'current', 'bmi': 36}},
-            {'age': 60, 'gender': 'F', 'chronic': ['diabetes'],
-             'lifestyle': {'smoking': 'current', 'bmi': 32}},
-        ]
-        for profile in high_risk_profiles:
-            for _ in range(4):  # 4 تكرارات لكل profile
-                scenarios.append(self.generate_high_risk_moderate_vitals_scenario(
-                    hours=3, interval_minutes=5,
-                    age=profile['age'], gender=profile['gender'],
-                    chronic_conditions=profile['chronic'],
-                    lifestyle=profile['lifestyle'],
-                ))
-
-        # مقابلهم: شباب أصحاء بنفس الـ vitals = آمنون
-        low_risk_profiles = [
-            {'age': 22, 'chronic': [], 'lifestyle': {'smoking': 'never', 'bmi': 21}},
-            {'age': 28, 'chronic': [], 'lifestyle': {'smoking': 'never', 'bmi': 23}},
-            {'age': 35, 'chronic': [], 'lifestyle': {'smoking': 'former', 'bmi': 25}},
-        ]
-        for profile in low_risk_profiles:
-            for _ in range(4):
-                scenarios.append(self.generate_low_risk_moderate_vitals_scenario(
-                    hours=3, interval_minutes=5,
-                    age=profile['age'],
-                    chronic_conditions=profile['chronic'],
-                    lifestyle=profile['lifestyle'],
-                ))
+        # إضافة سيناريوهات الخطر المنعزل والبيانات الناقصة
+        scenarios.extend(self.generate_isolated_danger_scenarios(num_each=30))
+        scenarios.extend(self.generate_partial_sensor_scenarios(num_each=20))
 
         return scenarios
