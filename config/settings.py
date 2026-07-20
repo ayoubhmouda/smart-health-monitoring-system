@@ -175,3 +175,12 @@ REST_FRAMEWORK = {
 
     'DEFAULT_PAGINATION_CLASS': None,  # ← أضف هذا السطر لإلغاء التقسيم مؤقتاً
 }
+
+
+# Cache settings using Redis
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+        'LOCATION': env('REDIS_URL', default='redis://redis:6379/0'),
+    }
+}

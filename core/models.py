@@ -1,3 +1,5 @@
+
+# pyrefly: ignore [missing-import]
 from django.db import models
 from datetime import date
 
@@ -52,36 +54,21 @@ class Disabled(models.Model):
 
 class MedicalHistory(models.Model):
     monitored_element = models.OneToOneField(
-        'MonitoredElement',  # استخدم الاسم النصي لتجنب مشاكل الترتيب
-        on_delete=models.CASCADE,
-        related_name='medical_history'
+        'MonitoredElement', on_delete=models.CASCADE, related_name='medical_history'
     )
-    # 1. Chronic diseases (قائمة من القواميس)
-    chronic_conditions = models.JSONField(default=list, blank=True,null=True,
-        help_text="مثال: [{\"name\": \"Hypertension\", \"diagnosed\": \"2019\", \"status\": \"Controlled\", \"medication\": \"Amlodipine\"}]")
-    
-    # 2. Allergies (قائمة بسيطة)
-    allergies = models.JSONField(default=list, blank=True,null=True,
-        help_text="مثال: [\"Penicillin\", \"Latex\"]")
-    
-    # 3. Current medications (قائمة بسيطة)
-    medications = models.JSONField(default=list, blank=True,null=True,
-        help_text="مثال: [\"Metformin\", \"Aspirin\"]")
-    
-    # 4. Lifestyle (قاموس)
-    lifestyle = models.JSONField(default=dict, blank=True,null=True,
-        help_text="مثال: {\"smoking\": \"never\", \"alcohol\": \"never\", \"exercise\": \"low\", \"bmi\": 28}")
-    
-    # 5. Family history (قائمة بسيطة)
-    family_history = models.JSONField(default=list, blank=True,null=True,
-        help_text="مثال: [\"Heart Disease\", \"Diabetes\"]")
-    
-    # 6. Previous surgeries (قائمة بسيطة)
-    previous_surgeries = models.JSONField(default=list, blank=True,null=True,
-        help_text="مثال: [\"Appendectomy 2019\"]")
-
-    notes = models.TextField(blank=True)
+    chronic_conditions = models.JSONField(
+        default=list, 
+        blank=True, 
+        null=True,
+        help_text='الميزات المدعومة: "hypertension", "diabetes", "heart_disease". مثال: [{"name": "Hypertension"}, {"name": "Diabetes"}]'
+    )
+    lifestyle = models.JSONField(
+        default=dict, 
+        blank=True, 
+        null=True,
+        help_text='الميزات المدعومة: "smoking" (current/former), "bmi" (رقم). مثال: {"smoking": "current", "bmi": 32}'
+    )
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"Medical History of {self.monitored_element.full_name}"
+        return f'Medical History of {self.monitored_element.full_name}'

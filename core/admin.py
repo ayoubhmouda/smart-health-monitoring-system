@@ -24,14 +24,4 @@ class DisabledAdmin(admin.ModelAdmin):
 @admin.register(MedicalHistory)
 class MedicalHistoryAdmin(admin.ModelAdmin):
     list_display = ('monitored_element', 'updated_at')
-    # يمكنك تخصيص عرض الحقول في صفحة التعديل (اختياري)
-    fieldsets = (
-        (None, {'fields': ('monitored_element',)}),
-        ('Chronic Conditions', {'fields': ('chronic_conditions',)}),
-        ('Allergies', {'fields': ('allergies',)}),
-        ('Medications', {'fields': ('medications',)}),
-        ('Lifestyle', {'fields': ('lifestyle',)}),
-        ('Family History', {'fields': ('family_history',)}),
-        ('Previous Surgeries', {'fields': ('previous_surgeries',)}),
-        ('Notes', {'fields': ('notes',)}),
-    )
+    fields = ('monitored_element', 'chronic_conditions', 'lifestyle')
