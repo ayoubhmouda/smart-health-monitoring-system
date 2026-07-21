@@ -24,4 +24,4 @@ class DisabledAdmin(admin.ModelAdmin):
 @admin.register(MedicalHistory)
 class MedicalHistoryAdmin(admin.ModelAdmin):
     list_display = ('monitored_element', 'updated_at')
-    fields = ('monitored_element', 'chronic_conditions', 'lifestyle')
+    fields = ('monitored_element', 'chronic_conditions')

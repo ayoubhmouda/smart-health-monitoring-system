@@ -1,4 +1,3 @@
-
 # pyrefly: ignore [missing-import]
 from django.db import models
 from datetime import date
@@ -15,6 +14,7 @@ class MonitoredElement(models.Model):
     gender = models.CharField(max_length=10, choices=[('M', 'Male'), ('F', 'Female')])
     element_type = models.CharField(max_length=20, choices=ElementType.choices)
     created_at = models.DateTimeField(auto_now_add=True)
+
     @property
     def age(self) -> int:
         """يحسب العمر الحالي بناءً على تاريخ الميلاد."""
@@ -60,13 +60,12 @@ class MedicalHistory(models.Model):
         default=list, 
         blank=True, 
         null=True,
-        help_text='الميزات المدعومة: "hypertension", "diabetes", "heart_disease". مثال: [{"name": "Hypertension"}, {"name": "Diabetes"}]'
-    )
-    lifestyle = models.JSONField(
-        default=dict, 
-        blank=True, 
-        null=True,
-        help_text='الميزات المدعومة: "smoking" (current/former), "bmi" (رقم). مثال: {"smoking": "current", "bmi": 32}'
+        help_text=(
+            'قائمة الأمراض المزمنة المعالجة بنموذج MIMIC.\n'
+            '- أمراض القلب: "heart_disease", "heart_failure"\n'
+            '- أمراض مزمنة: "hypertension", "diabetes", "copd"\n'
+            'مثال: [{"name": "heart_disease"}, {"name": "diabetes"}]'
+        )
     )
     updated_at = models.DateTimeField(auto_now=True)
 

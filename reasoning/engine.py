@@ -6,7 +6,7 @@ from context.models import ContextHistory
 class ReasoningEngine:
     """
     محرك استدلال هجين: يجمع بين شبكة الأمان (ThresholdPredictor)
-    والذكاء السياقي (MLPredictor) لإصدار إنذارات شاملة.
+    والذكاء الاصطناعي الشامل (MLPredictor) لإصدار إنذارات وتنبؤات مبكرة.
     """
 
     def __init__(self, ml_predictor: BasePredictor):
@@ -23,15 +23,15 @@ class ReasoningEngine:
 
         all_insights = []
 
-        # 1. شبكة الأمان (قواعد صارمة)
+        # 1. شبكة الأمان (قواعد الحدود السريرية الصارمة)
         threshold_insights = self.threshold_predictor.predict(latest_history)
         all_insights.extend(threshold_insights)
 
-        # 2. الذكاء السياقي (ML + المعزز الشخصي)
+        # 2. الذكاء السياقي (التنبؤ المبكر بنموذج MIMIC-IV)
         ml_insights = self.ml_predictor.predict(latest_history)
         all_insights.extend(ml_insights)
 
-        # حفظ الكل
+        # 3. حفظ نتائج التنسيق والـ Insights في قاعدة البيانات
         for insight in all_insights:
             insight.save()
 
