@@ -1,3 +1,4 @@
+# prepare_mimic_data.py
 import os
 import pandas as pd
 import numpy as np
@@ -9,6 +10,8 @@ CHARTEVENTS_PATH = os.path.join(MIMIC_DIR, 'icu', 'chartevents.csv.gz')
 ICUSTAYS_PATH = os.path.join(MIMIC_DIR, 'icu', 'icustays.csv.gz')
 PATIENTS_PATH = os.path.join(MIMIC_DIR, 'hosp', 'patients.csv.gz')
 DIAGNOSES_PATH = os.path.join(MIMIC_DIR, 'hosp', 'diagnoses_icd.csv.gz')
+# 🟢 1. إضافة مسار ملف القبول والمنومين لاستخراج حقل الوفاة منه
+ADMISSIONS_PATH = os.path.join(MIMIC_DIR, 'hosp', 'admissions.csv.gz')
 
 ITEM_MAP = {
     220045: 'heart_rate',
@@ -68,20 +71,31 @@ def load_patient_history():
     icustays = pd.read_csv(ICUSTAYS_PATH, usecols=['stay_id', 'subject_id'])
     patients = pd.read_csv(PATIENTS_PATH, usecols=['subject_id', 'gender', 'anchor_age'])
     
-    # 🟢 تحويل الجنس إلى قيمة رقمية: 1 للأنثى، 0 للذكر
+    # تحويل الجنس إلى قيمة رقمية: 1 للأنثى، 0 للذكر
     patients['is_female'] = (patients['gender'] == 'F').astype(int)
     patients = patients.drop(columns=['gender'])
 
     diagnoses = pd.read_csv(DIAGNOSES_PATH, usecols=['subject_id', 'icd_code'])
     diagnoses['has_heart_disease'] = diagnoses['icd_code'].astype(str).str.startswith(('I50', 'I21', 'I25', '410', '428'), na=False).astype(int)
     diagnoses['has_chronic_condition'] = diagnoses['icd_code'].astype(str).str.startswith(('E11', 'I10', 'J44', '250', '401'), na=False).astype(int)
+    # 🟢 2. استخراج حالات تسمم الدم Sepsis بناءً على أكواد عائلة A41 في ICD-10 وعائلة 9959 في ICD-9 من ملف التشخيصات الحقيقي
+    diagnoses['has_sepsis'] = diagnoses['icd_code'].astype(str).str.startswith(('A41', '9959', '78552', 'R652'), na=False).astype(int)
     
     history = diagnoses.groupby('subject_id').agg({
         'has_heart_disease': 'max',
-        'has_chronic_condition': 'max'
+        'has_chronic_condition': 'max',
+        'has_sepsis': 'max' # 🟢 دمج حقل السمس في التجميع
     }).reset_index()
     
-    patient_history = pd.merge(patients, history, on='subject_id', how='left').fillna(0)
+    # 🟢 3. استخراج حقل الوفاة hospital_expire_flag من ملف admissions الحقيقي لـ MIMIC
+    admissions = pd.read_csv(ADMISSIONS_PATH, usecols=['subject_id', 'hospital_expire_flag'])
+    # تجميع الوفاة لـ subject_id بأخذ القيمة القصوى (إذا توفي في أي حجز بمشفى يعتبر 1)
+    mortality = admissions.groupby('subject_id')['hospital_expire_flag'].max().reset_index()
+    
+    patient_history = pd.merge(patients, history, on='subject_id', how='left')
+    # 🟢 4. دمج حقل الوفاة الحقيقي مع السجل الطبي للمريض
+    patient_history = pd.merge(patient_history, mortality, on='subject_id', how='left').fillna(0)
+    
     stay_history = pd.merge(icustays, patient_history, on='subject_id', how='left')
     return stay_history
 
@@ -95,6 +109,8 @@ if __name__ == "__main__":
     
     final_df['has_heart_disease'] = final_df['has_heart_disease'].fillna(0).astype(int)
     final_df['has_chronic_condition'] = final_df['has_chronic_condition'].fillna(0).astype(int)
+    final_df['has_sepsis'] = final_df['has_sepsis'].fillna(0).astype(int) # 🟢 تعبئة الفراغات لـ Sepsis
+    final_df['hospital_expire_flag'] = final_df['hospital_expire_flag'].fillna(0).astype(int) # 🟢 تعبئة الفراغات للوفاة
     final_df['anchor_age'] = final_df['anchor_age'].fillna(50)
     final_df['is_female'] = final_df['is_female'].fillna(0).astype(int)
     
@@ -103,4 +119,4 @@ if __name__ == "__main__":
     
     output_path = os.path.join(BASE_DIR, 'reasoning', 'ml', 'mimic_ml_dataset.csv')
     final_df.to_csv(output_path, index=False)
-    print(f"✅ تم تحديث الداتاسيت بنجاح وكل الأعمدة أصبحت رقمية (Numeric) بالكامل!")
+    print(f"✅ تم تحديث الداتاسيت بنجاح وتصدير الأعمدة الحقيقية للوفاة والتسمم بداخلها!")

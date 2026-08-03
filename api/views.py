@@ -1,5 +1,7 @@
 # api/views.py
+
 from rest_framework import viewsets, status
+import django_filters
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
@@ -50,11 +52,23 @@ class DataSourceConfigViewSet(viewsets.ModelViewSet):
     queryset = DataSourceConfig.objects.all()
     serializer_class = DataSourceConfigSerializer
 
+# 2. 🟢 تعريف كلاس فلترة مخصص لدعم العلاقات المتداخلة (__ Lookup) بضمان 100%
+class SensorReadingFilter(django_filters.FilterSet):
+    class Meta:
+        model = SensorReading
+        fields = {
+            'sensor': ['exact'],
+            'sensor__monitored_element': ['exact'], # دعم فلترة القراءات بمعرف المريض العكسي
+        }
+
+# 3. الـ ViewSet المحدث والمربوط بكلاس الفلترة الجديد
 class SensorReadingViewSet(viewsets.ModelViewSet):
     queryset = SensorReading.objects.all().order_by('-recorded_at')
     serializer_class = SensorReadingSerializer
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
-    filterset_fields = ['sensor', 'sensor__monitored_element']
+    
+    filterset_class = SensorReadingFilter
+    
 
 class ContextViewSet(viewsets.ModelViewSet):
     queryset = Context.objects.all()

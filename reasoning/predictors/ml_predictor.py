@@ -6,13 +6,14 @@ from context.models import ContextHistory
 from core.models import MedicalHistory
 from reasoning.models import Insight
 from .base import BasePredictor
+# 🟢 استيراد دالة هندسة الميزات الموحدة
+from reasoning.ml.feature_engineering import extract_features_from_window
 
 
 class MLPredictor(BasePredictor):
     """
     مُتنبئ الذكاء الاصطناعي المعتمد على MIMIC-IV (22 ميزة).
-    يعمل بمرونة: يعتمد على الحساسات المتوفرة، ويستكمل الحساسات المفقودة
-    بقيم فيزيولوجية طبيعية آمنة حتى لا يتوقف النظام عن حماية المريض.
+    يستخدم دالة هندسة الميزات الموحدة لضمان تطابق مدخلات التنبؤ الفوري مع مدخلات التدريب.
     """
 
     def __init__(self, model_path=None):
@@ -28,10 +29,10 @@ class MLPredictor(BasePredictor):
             data = pickle.load(f)
             self.model = data["model"]
             self.feature_names = data["feature_names"]
-            self.best_threshold = data.get("best_threshold", 0.70)
+            self.best_threshold = data.get("best_threshold", 0.55)
 
     def _extract_medical_history_features(self, element) -> dict:
-        """استخراج تاريخ المريض الطبي الحقيقي من قاعدة البيانات"""
+        """استخراج تاريخ المريض الطبي الحقيقي من قاعدة البيانات وتجهيز ميزاته"""
         has_heart_disease = 0
         has_chronic_condition = 0
 
@@ -74,74 +75,31 @@ class MLPredictor(BasePredictor):
         if not recent:
             return []
 
-        # تجميع العلامات الحيوية من الحساسات
-        hr_l, sbp_l, dbp_l, spo2_l, temp_l, resp_l = [], [], [], [], [], []
-        act_l, room_l = [], []
-
+        # تحويل بيانات الحساسات المختلفة إلى قائمة من القواميس المسطحة (Flat Dicts)
+        flat_contexts = []
         for ctx_h in recent:
             ctx = ctx_h.context
-            p = ctx.physiological_data or {}
-            a = ctx.activity_data or {}
-            e = ctx.environmental_data or {}
+            merged = {}
+            merged.update(ctx.physiological_data or {})
+            merged.update(ctx.activity_data or {})
+            merged.update(ctx.environmental_data or {})
+            flat_contexts.append(merged)
 
-            if p.get("heart_rate") is not None: hr_l.append(float(p["heart_rate"]))
-            if p.get("blood_pressure_systolic") is not None: sbp_l.append(float(p["blood_pressure_systolic"]))
-            if p.get("blood_pressure_diastolic") is not None: dbp_l.append(float(p["blood_pressure_diastolic"]))
-            if p.get("oxygen_saturation") is not None: spo2_l.append(float(p["oxygen_saturation"]))
-            if p.get("body_temperature") is not None: temp_l.append(float(p["body_temperature"]))
-            if p.get("respiratory_rate") is not None: resp_l.append(float(p["respiratory_rate"]))
-
-            if a.get("activity_level") is not None: act_l.append(float(a["activity_level"]))
-            if e.get("room_temperature") is not None: room_l.append(float(e["room_temperature"]))
-
-        # 🛑 شرط الأدنى: يجب توفر علامة حيوية رئيسية واحدة على الأقل (مثل النبض أو الأكسجين أو الضغط)
-        if not any([hr_l, spo2_l, sbp_l]):
+        # التأكد من توفر علامات حيوية رئيسية واحدة على الأقل في النافذة الزمنية
+        if not flat_contexts or not any(c.get("heart_rate") or c.get("oxygen_saturation") or c.get("blood_pressure_systolic") for c in flat_contexts):
             return []
 
-        # حساب القراءات مع استخدام المبادئ الطبيعية (Baselines) للحساسات غير المربوطة
-        # المبادئ الطبية الطبيعية: HR:75, SBP:120, DBP:80, SpO2:98%, Temp:37.0, Resp:16
-        hr_mean = np.mean(hr_l) if hr_l else 75.0
-        spo2_mean = np.mean(spo2_l) if spo2_l else 98.0
-        sbp_mean = np.mean(sbp_l) if sbp_l else 120.0
-        dbp_mean = np.mean(dbp_l) if dbp_l else 80.0
-        temp_mean = np.mean(temp_l) if temp_l else 37.0
-        resp_mean = np.mean(resp_l) if resp_l else 16.0
+        # استخراج الميزات الطبية الثابتة للمريض
+        med_features = self._extract_medical_history_features(element)
 
-        med = self._extract_medical_history_features(element)
+        # 🟢 استدعاء دالة هندسة الميزات الموحدة
+        features_dict = extract_features_from_window(flat_contexts, med_features)
 
-        features_dict = {
-            'heart_rate_mean': hr_mean,
-            'heart_rate_std': np.std(hr_l) if len(hr_l) > 1 else 0.0,
-            'heart_rate_max': np.max(hr_l) if hr_l else hr_mean,
-            'heart_rate_min': np.min(hr_l) if hr_l else hr_mean,
-
-            'blood_pressure_systolic_mean': sbp_mean,
-            'blood_pressure_systolic_std': np.std(sbp_l) if len(sbp_l) > 1 else 0.0,
-            'blood_pressure_systolic_max': np.max(sbp_l) if sbp_l else sbp_mean,
-
-            'blood_pressure_diastolic_mean': dbp_mean,
-            'blood_pressure_diastolic_std': np.std(dbp_l) if len(dbp_l) > 1 else 0.0,
-            'blood_pressure_diastolic_min': np.min(dbp_l) if dbp_l else dbp_mean,
-
-            'oxygen_saturation_mean': spo2_mean,
-            'oxygen_saturation_min': np.min(spo2_l) if spo2_l else spo2_mean,
-
-            'body_temperature_mean': temp_mean,
-            'body_temperature_max': np.max(temp_l) if temp_l else temp_mean,
-
-            'respiratory_rate_mean': resp_mean,
-            'respiratory_rate_max': np.max(resp_l) if resp_l else resp_mean,
-
-            'activity_level_baseline': np.mean(act_l) if act_l else 1.0,
-            'room_temperature_baseline': np.mean(room_l) if room_l else 22.0,
-
-            **med
-        }
-
+        # تنظيم الميزات كـ DataFrame متوافق مع مدخلات النموذج الرياضي
         df_input = pd.DataFrame([features_dict])
         X = df_input[self.feature_names]
 
-        # التنبؤ بواسطة نموذج MIMIC
+        # التنبؤ الفوري بنسبة الخطر بواسطة نموذج الـ Random Forest
         proba = self.model.predict_proba(X)[0]
         risk_prob = proba[1] if len(proba) > 1 else proba[0]
 

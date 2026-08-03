@@ -1,3 +1,4 @@
+# train.py
 import os
 import pickle
 import pandas as pd
@@ -7,14 +8,32 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
 
 def create_target_labels(df):
-    # شروط أكثر صرامة للخطر الحقيقي
+    """
+    ينشئ عمود الهدف المركب (Composite Target) للتنبؤ السريري الحقيقي:
+    1. الوضع الرئيسي المستقبلي (الوفاة أو تسمم الدم): يتفعل تلقائياً عند وجود الأعمدة الأصلية.
+    2. الوضع الاحتياطي الحالي (الأزمات الفسيولوجية): يتفعل في حال غيابها.
+    """
+    # 🟢 1. التحقق من توفر الأعمدة الطبية الحقيقية المجهزة من ملف prepare_mimic_data.py
+    has_expired_col = 'hospital_expire_flag' in df.columns
+    has_sepsis_col = 'has_sepsis' in df.columns or 'sepsis' in df.columns
+    
+    if has_expired_col or has_sepsis_col:
+        print("🎯 تم رصد الأعمدة الطبية الحقيقية! استخدام الهدف المركب: (الوفاة أو تسمم الدم Sepsis)...")
+        expired = df.get('hospital_expire_flag', 0)
+        sepsis = df.get('has_sepsis', df.get('sepsis', 0))
+        
+        # دمج الوفاة أو التسمم في هدف واحد
+        is_high_risk = (expired == 1) | (sepsis == 1)
+        return is_high_risk.astype(int)
+
+    # 🟢 2. الوضع الاحتياطي لحالات الأزمات الفسيولوجية
+    print("ℹ️ غياب الأعمدة الطبية الأصلية؛ التراجع لتطبيق العتبات الفسيولوجية الصارمة...")
     critical_spo2 = df['oxygen_saturation_min'] < 85.0
     critical_hr = (df['heart_rate_max'] > 130) | (df['heart_rate_min'] < 45)
     critical_bp = (df['blood_pressure_systolic_max'] > 180) | (df['blood_pressure_diastolic_min'] < 50)
     critical_rr = (df['respiratory_rate_max'] > 35) | (df['respiratory_rate_mean'] < 8)
     critical_temp = (df['body_temperature_max'] > 39.5) | (df['body_temperature_mean'] < 35.0)
     
-    # خطر مزمن حقيقي: وجود مرض قلب + علامات حيوية سيئة للغاية
     chronic_risk = (df['has_heart_disease'] == 1) & (df['heart_rate_mean'] > 100)
 
     is_high_risk = critical_spo2 | critical_hr | critical_bp | critical_rr | critical_temp | chronic_risk
@@ -33,11 +52,14 @@ def train_and_save_model():
     # 1. إنشاء العمود المستهدف (Target)
     df['is_high_risk'] = create_target_labels(df)
 
-    # 2. تصفية الأعمدة الرقمية فقط
-    ignore_cols = ['stay_id', 'subject_id', 'is_high_risk']
+    # 🟢 3. حماية إضافية (منع تسريب البيانات): استبعاد أعمدة الأهداف الطبية بالكامل من مصفوفة المدخلات X
+    ignore_cols = [
+        'stay_id', 'subject_id', 'is_high_risk', 
+        'hospital_expire_flag', 'has_sepsis', 'sepsis'
+    ]
     feature_cols = [col for col in df.columns if col not in ignore_cols]
 
-    # 🟢 حماية إضافية: إبقاء الأعمدة الرقمية فقط
+    # إبقاء الأعمدة الرقمية فقط للميزات
     X_df = df[feature_cols].select_dtypes(include=[np.number])
     X = X_df.fillna(X_df.mean())
     y = df['is_high_risk']

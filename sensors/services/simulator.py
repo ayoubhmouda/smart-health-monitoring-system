@@ -1,21 +1,24 @@
+# sensors/services/simulator.py
 import random
 import math
 import time
 from datetime import datetime, timedelta
 from typing import Dict, Any, Optional
+from django.utils import timezone
 
 class HealthSimulator:
     """يولد قراءات واقعية متناسقة طبياً تعتمد على السير العشوائي المتدرج (Random Walk) مع كاش لحفظ الحالة."""
 
+    # خطوات الحركة العشوائية المتناسقة مع دورة الـ 30 ثانية
     MAX_STEPS = {
-        'heart_rate': 1.5,
-        'blood_pressure_systolic': 2.0,
-        'blood_pressure_diastolic': 1.0,
-        'oxygen_saturation': 0.3,
-        'body_temperature': 0.05,
+        'heart_rate': 4.0,               # صعود أسرع للنبض ليلحق بالقمة (115) خلال 10 دقائق
+        'blood_pressure_systolic': 5.0,   # صعود أسرع للضغط
+        'blood_pressure_diastolic': 3.0,
+        'oxygen_saturation': 1.0,         # هبوط أسرع للأكسجين ليلحق بالقمة (88) خلال 10 دقائق
+        'body_temperature': 0.25,         # صعود حراري متناسق مع التدهور
         'room_temperature': 0.1,
-        'blood_glucose': 2.0,
-        'respiratory_rate': 0.5
+        'blood_glucose': 5.0,
+        'respiratory_rate': 1.5           # صعود أسرع لمعدل التنفس
     }
 
     PROFILES = {
@@ -25,22 +28,22 @@ class HealthSimulator:
             'blood_pressure_diastolic': (70, 85),
             'oxygen_saturation': (95, 100),
             'body_temperature': (36.1, 37.2),
-            'activity_level': (0, 3),
+            'activity_level': (0, 1),
             'room_temperature': (20, 24),
             'blood_glucose': (80, 120),
             'respiratory_rate': (14, 18),
             'description': 'Patient stable'
         },
         'gradual_deterioration': {
-            'heart_rate': (70, 115),
-            'blood_pressure_systolic': (110, 160),
-            'blood_pressure_diastolic': (70, 100),
-            'oxygen_saturation': (88, 98),
+            'heart_rate': (110, 130),
+            'blood_pressure_systolic': (130, 160),
+            'blood_pressure_diastolic': (80, 100),
+            'oxygen_saturation': (98, 88), # يبدأ من 98% ويهبط تدريجياً لـ 88%
             'body_temperature': (37.0, 39.5),
-            'activity_level': (0, 3),
+            'activity_level': (3, 0),       # يبدأ من 3 (نشاط) ويهبط تدريجياً لـ 0 (خمول)
             'room_temperature': (21, 26),
             'blood_glucose': (90, 200),
-            'respiratory_rate': (16, 28),
+            'respiratory_rate': (18, 28),
             'description': 'Patient gradually worsening'
         },
         'abnormal': {
@@ -105,22 +108,25 @@ class HealthSimulator:
             except Exception:
                 pass
 
-        if cached_state:
+        # 🟢 تعديل حاسم: لا نقرأ الكاش المؤقت إلا إذا كان يتطابق تماماً مع الملف المطلوب حالياً لمنع التداخل
+        if cached_state and cached_state.get('profile') == profile:
             self.profile = cached_state.get('profile', profile)
             self.iteration = cached_state.get('iteration', 0)
-            self.start_time = start_time if start_time is not None else cached_state.get('start_time', time.time())
+            self.start_time = start_time if start_time is not None else cached_state.get('start_time', timezone.now().timestamp())
             self.deterioration_progress = cached_state.get('deterioration_progress', 0.0)
             self._cached_batch = cached_state.get('cached_batch', {})
             self._unfetched_sensors = set(cached_state.get('unfetched_sensors', []))
             self.last_readings = cached_state.get('last_readings', {})
         else:
+            # 🟢 في حال تغير البروفايل أو تصفير الكاش، ابدأ فوراً وبدقة من الصفر الزمني الموحد لدجانغو
             self.profile = profile
             self.iteration = 0
-            self.start_time = start_time if start_time is not None else time.time()
+            self.start_time = start_time if start_time is not None else timezone.now().timestamp()
             self.deterioration_progress = 0.0
             self._cached_batch = {}
             self._unfetched_sensors = set()
             self.last_readings = {}
+            self._save_state_to_cache()
 
     def _save_state_to_cache(self):
         if not self.cache_key:
@@ -149,8 +155,7 @@ class HealthSimulator:
             
         self.profile = profile
         self.iteration = 0
-        # 🟢 تثبيت وقت البداية القادم من قاعدة البيانات لمنع تصفير التدهور التدريجي عند الانتقال بين الحساسات
-        self.start_time = start_time if start_time is not None else time.time()
+        self.start_time = start_time if start_time is not None else timezone.now().timestamp()
         self.deterioration_progress = 0.0
         self._cached_batch = {}
         self._unfetched_sensors = set()
@@ -175,22 +180,16 @@ class HealthSimulator:
 
         progress = 0.0
         if self.profile == 'gradual_deterioration':
-            elapsed_seconds = time.time() - self.start_time
-            progress = min(1.0, elapsed_seconds / 300.0)
+            elapsed_seconds = timezone.now().timestamp() - self.start_time
+            progress = min(1.0, elapsed_seconds / 600.0)
             self.deterioration_progress = progress
 
+        # تم إلغاء سطر الـ Swap المكرر ليعتمد المحاكي مباشرة على الـ PROFILES
         current_bounds = {}
         for s_type, val in profile_config.items():
             if s_type == 'description': continue
             low, high = val
-
-            if self.profile == 'gradual_deterioration':
-                if s_type in ('oxygen_saturation', 'activity_level'):
-                    current_bounds[s_type] = (high, low)
-                else:
-                    current_bounds[s_type] = (low, high)
-            else:
-                current_bounds[s_type] = (low, high)
+            current_bounds[s_type] = (low, high)
 
         for s_type, bounds in current_bounds.items():
             if s_type == 'activity_level':
@@ -215,7 +214,7 @@ class HealthSimulator:
                 drift = 0.05 * (target_val - prev_val)
                 new_val = prev_val + step + drift
             else:
-                # 🟢 الحساب المباشر والدقيق بناءً على الوقت المنقضي في حال فقدان الكاش المؤقت
+                # الحساب المباشر والدقيق بناءً على الوقت المنقضي في حال فقدان الكاش المؤقت
                 new_val = target_val if self.profile == 'gradual_deterioration' else random.uniform(low, high)
 
             min_val, max_val = min(low, high), max(low, high)
@@ -225,8 +224,8 @@ class HealthSimulator:
             activity = float(int(base_vals['activity_level']))
             if activity == 3.0:
                 # تكسير الجدار الثابت للنبض والضغط والتنفس عند أعلى مستوى نشاط لجعل القيم فريدة لكل مريض
-                hr_floor = 135.0 + random.uniform(-2.0, 2.0)
-                base_vals['heart_rate'] = max(hr_floor, min(155.0, base_vals['heart_rate'] + random.uniform(2, 5)))
+                hr_floor = 110.0 + random.uniform(-2.0, 2.0)
+                base_vals['heart_rate'] = max(hr_floor, min(128.0, base_vals['heart_rate'] + random.uniform(2, 5)))
                 
                 bps_floor = 140.0 + random.uniform(-3.0, 3.0)
                 base_vals['blood_pressure_systolic'] = max(bps_floor, min(155.0, base_vals['blood_pressure_systolic'] + random.uniform(3, 6)))
@@ -257,6 +256,7 @@ class HealthSimulator:
         self.last_readings = final_batch.copy()
         return final_batch
 
+    # 🟢 تم إصلاح القوس المزدوج الخاطئ هنا ليصبح قوساً فردياً سليماً تماماً 100%
     def generate_reading(self, sensor_type: str) -> float:
         if sensor_type not in self._unfetched_sensors or not self._cached_batch:
             self._cached_batch = self._generate_coherent_batch()

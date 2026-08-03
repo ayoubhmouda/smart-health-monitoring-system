@@ -149,12 +149,13 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'UTC'
 
+# pyrefly: ignore [missing-import]
 from celery.schedules import crontab
 
 CELERY_BEAT_SCHEDULE = {
-    'read-sensors-every-10-seconds': {
+    'read-sensors-every-30-seconds': {
         'task': 'sensors.tasks.read_all_active_sensors',
-        'schedule': 10.0,  # كل 10 ثوانٍ
+        'schedule': 30.0,  # كل 30 ثوانٍ
     },
 
     'aggregate-context-every-30-seconds': {
