@@ -1,7 +1,7 @@
 {
   "blood_pressure": "ضغط الدم",
   "respiratory_rate": "معدل التنفس",
-  "temperature": "درجة الحرارة",
+  "temperature": "درجة حرارة الجسم",
   "heart_rate": "معدل ضربات القلب",
   "stable": "مستقر",
   "patient_monitor": "مراقبة المريض",

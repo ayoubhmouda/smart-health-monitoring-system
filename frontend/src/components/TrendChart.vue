@@ -1,7 +1,6 @@
 <!-- TrendChart.vue -->
 <template>
   <div class="w-full">
-    <!-- حاوية المخطط بارتفاع ثابت لضمان الاستجابة التامة على كافة الشاشات -->
     <div style="height: 220px; position: relative;">
       <canvas ref="chartCanvas"></canvas>
     </div>
@@ -21,31 +20,85 @@ const props = defineProps({
 const chartCanvas = ref(null)
 let chartInstance = null
 
-const buildChart = () => {
+const formatTime = (ts) => {
+  if (!ts) return ''
+  const date = new Date(ts)
+  return isNaN(date.getTime()) 
+    ? '' 
+    : date.toLocaleTimeString('ar-LY', { hour: '2-digit', minute: '2-digit' })
+}
+
+// 🟢 دالة فرز مرنة تفحص كائنات الـ WebSocket والـ API معاً دون انقطاع
+const getSensorName = (r) => {
+  if (!r) return ''
+  return r.sensor_name || r.sensor?.sensor_type?.name || ''
+}
+
+const updateOrCreateChart = () => {
   if (!chartCanvas.value) return
 
   const ctx = chartCanvas.value.getContext('2d')
   
-  // ترتيب القراءات زمنياً من الأقدم للأحدث لعرض التدرج السليم على المحور الأفقي
-  const sortedReadings = [...props.readings].reverse()
+  // 1. فرز كافة القراءات زمنياً
+  const sortedReadings = [...props.readings].sort((a, b) => new Date(a.recorded_at) - new Date(b.recorded_at))
   
-  // تجميع نقاط القراءة لكلا المؤشرين الفسيولوجيين المتناغمين
-  const hrDataPoints = sortedReadings.filter(r => r.sensor?.sensor_type?.name === 'Heart Rate')
-  const bpSysDataPoints = sortedReadings.filter(r => r.sensor?.sensor_type?.name === 'Blood Pressure Systolic')
+  // 2. تجميع القراءات حسب الطابع الزمني الموحد بدعم المسميات الفلكية المباشرة والمسطحة
+  const timeMap = new Map()
 
-  // توليد التسميات الزمنية للمحور الأفقي بناءً على طابع وقت نبض القلب
-  const labels = hrDataPoints.map(r => {
-    if (!r.recorded_at) return ''
-    const date = new Date(r.recorded_at)
-    return isNaN(date.getTime()) ? '' : date.toLocaleTimeString('ar', { hour: '2-digit', minute: '2-digit' })
+  sortedReadings.forEach(r => {
+    if (!r.recorded_at) return
+    const timeKey = formatTime(r.recorded_at)
+    if (!timeKey) return
+
+    if (!timeMap.has(timeKey)) {
+      timeMap.set(timeKey, { hr: null, bpSys: null, rawTime: r.recorded_at })
+    }
+
+    const entry = timeMap.get(timeKey)
+    const sensorName = getSensorName(r) // 🟢 استخدام الفلترة المصلحة
+
+    if (sensorName === 'Heart Rate' && r.value != null) {
+      entry.hr = Number(r.value)
+    } else if (sensorName === 'Blood Pressure Systolic' && r.value != null) {
+      entry.bpSys = Number(r.value)
+    }
   })
-  
-  const hrValues = hrDataPoints.map(r => r.value)
-  const bpSysValues = bpSysDataPoints.map(r => r.value)
 
-  // تدمير المخطط القديم لمنع تسريب الذاكرة (Memory Leak) وإعادة البناء بنقاء
-  if (chartInstance) chartInstance.destroy()
+  const labels = []
+  const hrValues = []
+  const bpSysValues = []
 
+  timeMap.forEach((entry, timeKey) => {
+    labels.push(timeKey)
+    hrValues.push(entry.hr)
+    bpSysValues.push(entry.bpSys)
+  })
+
+  // 3. إضافة نقاط مستقبلية فارغة للتوسع الأفقِي
+  if (labels.length > 0) {
+    const lastReading = sortedReadings[sortedReadings.length - 1]
+    const lastTime = lastReading ? new Date(lastReading.recorded_at) : null
+    
+    if (lastTime && !isNaN(lastTime.getTime())) {
+      for (let i = 1; i <= 3; i++) {
+        const futureDate = new Date(lastTime.getTime() + i * 2 * 60 * 1000)
+        labels.push(formatTime(futureDate))
+        hrValues.push(null)
+        bpSysValues.push(null)
+      }
+    }
+  }
+
+  // 4. التحديث الانسيابي عند وجود المخطط بالذاكرة
+  if (chartInstance) {
+    chartInstance.data.labels = labels
+    chartInstance.data.datasets[0].data = hrValues
+    chartInstance.data.datasets[1].data = bpSysValues
+    chartInstance.update('none')
+    return
+  }
+
+  // 5. البناء الأولي للمخطط
   chartInstance = new Chart(ctx, {
     type: 'line',
     data: {
@@ -54,73 +107,80 @@ const buildChart = () => {
         {
           label: 'نبضات القلب (bpm)',
           data: hrValues,
-          borderColor: '#f43f5e', // لون أحمر مرجاني دافئ وأنيق
-          borderWidth: 1.8,       // خط محدد بوضوح كالأجهزة السريرية
-          backgroundColor: 'rgba(244, 63, 94, 0.02)', // ظل وردي ناعم جداً تحت المنحنى
-          tension: 0.35,          // تموج انسيابي يحاكي تموجات القلب الحقيقية
+          borderColor: '#f43f5e',
+          borderWidth: 2,
+          backgroundColor: 'rgba(244, 63, 94, 0.04)',
+          tension: 0.35,
           fill: true,
-          pointRadius: 0,         // إلغاء النقاط الدائرية لإبقاء المنحنى نقياً
-          pointHoverRadius: 4,
+          spanGaps: true,
+          pointRadius: (context) => {
+            const index = context.dataIndex
+            const count = context.dataset.data.length
+            return index === count - 4 ? 5 : 0
+          },
+          pointHoverRadius: 6,
           pointBackgroundColor: '#f43f5e',
+          pointBorderColor: '#ffffff',
+          pointBorderWidth: 1.5,
         },
         {
           label: 'الضغط الانقباضي (mmHg)',
           data: bpSysValues,
-          borderColor: '#0ea5e9', // لون أزرق سماوي طبي نقي ومريح
-          borderWidth: 1.8,
-          backgroundColor: 'rgba(14, 165, 233, 0.02)', // ظل أزرق ناعم جداً تحت المنحنى
+          borderColor: '#0ea5e9',
+          borderWidth: 2,
+          backgroundColor: 'rgba(14, 165, 233, 0.04)',
           tension: 0.35,
           fill: true,
-          pointRadius: 0,
-          pointHoverRadius: 4,
+          spanGaps: true,
+          pointRadius: (context) => {
+            const index = context.dataIndex
+            const count = context.dataset.data.length
+            return index === count - 4 ? 5 : 0
+          },
+          pointHoverRadius: 6,
           pointBackgroundColor: '#0ea5e9',
+          pointBorderColor: '#ffffff',
+          pointBorderWidth: 1.5,
         }
       ]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      animation: {
+        duration: 400,
+        easing: 'easeOutQuart'
+      },
       plugins: {
-        legend: { display: false }, // إخفاء عناصر التحكم التقليدية لجعل التصميم أرقى
+        legend: { display: false },
         tooltip: {
           enabled: true,
-          backgroundColor: 'rgba(15, 23, 42, 0.9)', // خلفية فحمية أنيقة ومظلمة للتلميحات
-          titleFont: { size: 11, family: 'sans-serif', weight: 'bold' },
-          bodyFont: { size: 11, family: 'monospace' },
+          backgroundColor: 'rgba(15, 23, 42, 0.9)',
           padding: 10,
-          cornerRadius: 8,
-          displayColors: true
+          cornerRadius: 8
         }
       },
       scales: {
         x: { 
-          ticks: { 
-            color: '#64748b', // لون رمادي ناعم ونظيف للأرقام والتوقيت
-            font: { size: 9, family: 'monospace' }, 
-            maxTicksLimit: 6 
-          },
-          grid: { 
-            color: '#f1f5f9', // خطوط شبكة ناعمة جداً تندمج مع الخلفية الفاتحة للكرت
-            drawTicks: false 
-          }
+          ticks: { color: '#64748b', font: { size: 9, family: 'monospace' }, maxTicksLimit: 12 },
+          grid: { color: '#f1f5f9', drawTicks: false }
         },
         y: { 
-          ticks: { 
-            color: '#64748b', 
-            font: { size: 9, family: 'monospace' } 
-          },
-          grid: { 
-            color: '#f1f5f9', 
-            drawTicks: false 
-          }
+          suggestedMin: 50,
+          suggestedMax: 150,
+          ticks: { color: '#64748b', font: { size: 9, family: 'monospace' } },
+          grid: { color: '#f1f5f9', drawTicks: false }
         }
       }
     }
   })
 }
 
-// مراقبة القراءات القادمة من الحساسات بشكل مستمر لإعادة تحديث المخطط تلقائياً
-watch(() => props.readings, () => buildChart(), { deep: true })
-onMounted(() => buildChart())
-onUnmounted(() => { if (chartInstance) chartInstance.destroy() })
+watch(() => props.readings, () => updateOrCreateChart(), { deep: true })
+
+onMounted(() => updateOrCreateChart())
+
+onUnmounted(() => {
+  if (chartInstance) chartInstance.destroy()
+})
 </script>

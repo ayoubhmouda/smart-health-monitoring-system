@@ -1,192 +1,352 @@
-<!-- sidebar.vue -->
+<!-- Sidebar.vue -->
 <template>
-  <!-- 🟢 زر فتح الشريط الجانبي للشاشات الصغيرة مبرمج بنفس لون الـ Sidebar تماماً #0D9488 -->
-  <button 
-    @click="store.isSidebarOpen = !store.isSidebarOpen" 
-    class="lg:hidden fixed bottom-5 left-5 z-55 flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#0d9488] text-white border border-white/10 hover:border-white/30 shadow-2xl shadow-teal-950/40 active:scale-95 transition-all duration-300"
-  >
-    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path v-if="!store.isSidebarOpen" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
-      <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-    </svg>
-    <span class="text-xs font-bold">{{ store.isSidebarOpen ? 'إغلاق' : 'المرضى' }}</span>
-  </button>
-
-  <!-- خلفية شفافة ومظللة للجوال عند فتح الشريط الجانبي -->
-  <div v-if="store.isSidebarOpen" @click="store.isSidebarOpen = false" class="lg:hidden fixed inset-0 bg-black/60 backdrop-blur-xs z-30"></div>
-
-  <!-- 🟢 الشريط الجانبي الرئيسي الفخم باللون التركوازي الطبي المميز #0D9488 -->
-  <aside 
-    :class="[
-      store.isSidebarOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0',
-      'fixed inset-y-0 right-0 z-40 lg:static w-64 bg-[#0d9488] border-l border-white/10 flex flex-col transition-transform duration-300 ease-in-out min-h-screen shadow-xl'
-    ]" 
+  <aside
+    class="flex flex-col overflow-hidden shadow-2xl transition-transform duration-300 border-l border-white/10
+      fixed top-16 bottom-0 right-0 z-40 w-[245px] max-w-[90vw]
+      lg:static lg:top-auto lg:bottom-auto lg:z-auto lg:w-[245px] lg:max-w-none lg:translate-x-0 lg:h-full"
+    :class="{
+      'translate-x-full': !store.isSidebarOpen,
+      'translate-x-0': store.isSidebarOpen
+    }"
     dir="rtl"
   >
-    <!-- 🟢 1. رأس الشريط الأنيق والمنقح (تم حذف عبارة SMART HEALTH ووضع مؤشر أمان ناعم بدلها) -->
-    <div class="p-5 pb-4 border-b border-white/10 flex items-center justify-between">
-      <div class="flex items-center gap-2 select-none">
-        <!-- نقطة الهوية الطبية النابضة باللون الأبيض المضيء -->
-        <span class="w-2.5 h-2.5 rounded-full bg-white shadow-[0_0_10px_rgba(255,255,255,0.8)] animate-pulse"></span>
-        <span class="text-xs font-bold text-white/90">مراقب الحالات الحيوية</span>
+    <!-- Background Gradient -->
+    <div class="absolute inset-0 -z-10 bg-gradient-to-b from-[#0a3742] via-[#0d4553] to-[#072a33]" />
+
+    <div class="relative flex flex-col h-full min-h-0">
+      <!-- Main Navigation List (ثابت) -->
+      <div class="px-2 py-2 border-b border-white/10 flex-shrink-0">
+        <nav class="space-y-0.5">
+          <router-link
+            v-for="item in visibleNavigation"
+            :key="item.to"
+            :to="item.to"
+            class="nav-link"
+            active-class="nav-link-active"
+          >
+            <div class="flex items-center gap-2.5">
+              <Icon :icon="item.icon" class="w-4 h-4" />
+              <span class="text-xs font-medium">{{ item.label }}</span>
+            </div>
+
+            <!-- عداد الإشعارات الحمراء النشطة بالسايدبار -->
+            <span
+              v-if="item.to === '/alerts' && alertsStore.activeAlertsCount"
+              class="px-1.5 py-0.2 rounded-full bg-rose-500 text-white text-[10px] font-black shadow-sm"
+            >
+              {{ alertsStore.activeAlertsCount }}
+            </span>
+          </router-link>
+        </nav>
       </div>
-      <span class="text-[9px] bg-white/20 text-white border border-white/20 px-2 py-0.5 rounded-full font-bold font-mono">V2.0</span>
-    </div>
 
-    <!-- 2. ملف الطبيب المعالج بتنسيق عالي التباين متناسق مع الخلفية التركوازية -->
-    <div class="px-5 py-3 border-b border-white/10">
-      <router-link to="/profile" class="flex items-center gap-3 group cursor-pointer">
-        <div class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-white font-extrabold text-sm">
-          {{ doctorInitials }}
-        </div>
-        <div class="flex-1 min-w-0">
-          <p class="text-sm font-bold text-white group-hover:underline truncate">{{ doctorName }}</p>
-          <p class="text-[10px] text-teal-100/80 font-medium">طبيب معالج</p>
-        </div>
-        <svg class="w-3.5 h-3.5 text-white/70 group-hover:text-white transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-        </svg>
-      </router-link>
-    </div>
+      <!-- Primary Action: Add Patient (ثابت) -->
+      <div class="px-3 py-2 flex-shrink-0">
+        <router-link to="/patients/new" class="add-patient-btn">
+          <Icon icon="mdi:plus" class="w-4 h-4" />
+          <span>إضافة مريض جديد</span>
+        </router-link>
+      </div>
 
-    <!-- 🟢 3. زر إضافة مريض جديد باللون الأزرق الفاخر والبارز #2563EB تماشياً مع طلبك -->
-    <div class="px-5 py-3.5">
-      <button 
-        @click="openAddPatient"
-        class="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs py-3 px-4 rounded-xl transition-all duration-200 active:scale-[0.98] shadow-md shadow-blue-900/20 hover:shadow-blue-900/30"
-      >
-        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
-        </svg>
-        <span>إضافة مريض جديد</span>
-      </button>
-    </div>
+      <!-- Patient Section Header (ثابت) -->
+      <div class="px-3 py-2 flex items-center justify-between border-y border-white/10 bg-black/10 flex-shrink-0">
+        <h3 class="text-[10px] font-bold uppercase tracking-wider text-cyan-200/70">
+          سجل المراقبة الحية
+        </h3>
+        <span class="patient-count-badge">{{ patients.length }}</span>
+      </div>
 
-    <!-- 4. قائمة سجل الحالات المراقبة بالتأثيرات البيئية المضيئة عالية المقروئية لخط الـ IBM -->
-    <div class="px-5 py-2 border-b border-white/10">
-      <h3 class="text-[10px] font-bold text-teal-100/60 tracking-widest uppercase mb-1">سجل الحالات المراقبة</h3>
-    </div>
-    
-    <nav class="flex-1 px-3 py-2 overflow-y-auto max-h-[calc(100vh-380px)] custom-scrollbar space-y-1">
-      <ul class="space-y-1.5">
-        <li v-for="patient in patients" :key="patient.id"
-            @click="selectPatient(patient)"
-            :class="[
-              store.currentPatient?.id === patient.id 
-                ? 'bg-white text-teal-900 shadow-md border-white' 
-                : 'border-transparent text-teal-50 hover:bg-white/10 hover:text-white'
-            ]"
-            class="group p-3 rounded-xl border-r-4 cursor-pointer transition-all duration-200 flex flex-col gap-1.5 relative overflow-hidden"
+      <!-- Patient List (الوحيد القابل للتمرير والمصنف فسيولوجياً بالأولوية التامة) -->
+      <nav class="flex-1 min-h-0 overflow-y-auto px-2 py-1.5 custom-scrollbar space-y-0.5">
+        <!-- 🟢 الربط بـ sortedPatients بدلاً من القائمة العادية ليتصدر مريض الخطر القائمة فوراً -->
+        <div
+          v-for="patient in sortedPatients"
+          :key="patient.id"
+          @click="selectPatient(patient)"
+          :class="patientClasses(patient)"
+          class="relative overflow-hidden transition-all duration-300"
         >
-          <!-- خط الجاذبية الداخلي عند تحديد المريض النشط -->
-          <div v-if="store.currentPatient?.id === patient.id" class="absolute top-0 bottom-0 right-0 w-1 bg-teal-600"></div>
-          
-          <div class="text-sm font-bold transition-colors">
-            {{ patient.full_name }}
-          </div>
-          <div class="text-[11px] flex items-center gap-1.5 opacity-80 group-hover:opacity-100 font-medium">
-            <span :class="store.currentPatient?.id === patient.id ? 'text-slate-500' : 'text-teal-100/80'">{{ patient.element_type }}</span>
-            <span :class="store.currentPatient?.id === patient.id ? 'text-slate-300' : 'text-teal-700'" class="font-mono">•</span>
-            <span :class="store.currentPatient?.id === patient.id ? 'text-teal-700' : 'text-teal-200'" class="font-mono font-bold">{{ patient.age }} سنة</span>
-          </div>
-        </li>
-        <li v-if="patients.length === 0" class="text-center text-teal-100/50 text-xs py-6">لا يوجد مرضى بعد</li>
-      </ul>
-    </nav>
+          <div class="flex items-center justify-between w-full min-w-0">
+            <div class="min-w-0 flex-1">
+              <p class="text-[11px] font-bold truncate leading-tight flex items-center gap-1.5">
+                <!-- الوميض النبضي الأحمر السريع لاسم المريض المصاب بخطر حرج حالياً -->
+                <span v-if="alertsStore.patientAlertStates[patient.id] === 'CRITICAL'" class="flex h-2 w-2 relative shrink-0">
+                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                  <span class="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
+                </span>
+                <!-- الوميض النبضي البرتقالي الهادئ للخطر المتوسط -->
+                <span v-else-if="alertsStore.patientAlertStates[patient.id] === 'HIGH'" class="flex h-2 w-2 relative shrink-0">
+                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                  <span class="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+                </span>
+                <span>{{ patient.full_name }}</span>
+              </p>
+              <p class="text-[10px] text-cyan-200/60 mt-0.5 truncate">
+                {{ patient.age }} سنة <span class="opacity-40">•</span> {{ patient.element_type }}
+              </p>
+            </div>
+            
+            <!-- شارات التنبيه الرقمية الملونة بالدرجة المحددة سريرياً -->
+            <span v-if="alertsStore.patientAlertStates[patient.id] === 'CRITICAL'" class="px-1.5 py-0.2 rounded bg-rose-500 text-white text-[9px] font-black shrink-0 ml-1.5 animate-pulse">
+              إنذار حرج
+            </span>
+            <span v-else-if="alertsStore.patientAlertStates[patient.id] === 'HIGH'" class="px-1.5 py-0.2 rounded bg-amber-500 text-slate-900 text-[9px] font-black shrink-0 ml-1.5">
+              انتباه
+            </span>
 
-    <!-- 5. تذييل الشريط (تغيير اللغة وإنهاء الجلسة) بتناسق تام -->
-    <div class="p-4 border-t border-white/10 space-y-2 bg-black/10">
-      <!-- زر تبديل اللغة المشرق والشفاف -->
-      <button 
-        @click="toggleLanguage" 
-        class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl bg-white/10 border border-white/10 hover:border-white/30 text-xs font-semibold text-teal-50 hover:text-white transition-all duration-200"
-      >
-        <div class="flex items-center gap-2">
-          <svg class="w-4 h-4 text-teal-100" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
-          </svg>
-          <span>{{ locale === 'ar' ? 'English' : 'العربية' }}</span>
+            <Icon
+              v-if="store.currentPatient?.id === patient.id && !alertsStore.patientAlertStates[patient.id]"
+              icon="mdi:check"
+              class="w-4 h-4 shrink-0 text-teal-300"
+            />
+          </div>
         </div>
-        <span class="text-[9px] font-mono uppercase bg-white/20 px-1.5 py-0.5 rounded text-white font-bold">{{ locale }}</span>
-      </button>
 
-      <!-- زر إنهاء الجلسة بلون الورد الناعم عالي التباين -->
-      <button 
-        @click="logout" 
-        class="w-full flex items-center justify-center gap-2 bg-rose-500/20 hover:bg-rose-600/30 text-white font-bold text-xs py-2.5 px-4 rounded-xl border border-white/10 shadow-sm active:scale-[0.98] transition-all duration-200"
-      >
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
-        </svg>
-        <span>إنهاء الجلسة</span>
-      </button>
+        <div v-if="!patients.length" class="py-8 text-center text-xs text-cyan-200/40">
+          لا يوجد مرضى حالياً
+        </div>
+      </nav>
+
+      <!-- Footer: Profile Card (ثابت) -->
+      <footer class="p-2.5 border-t border-white/10 bg-black/15 flex-shrink-0">
+        <router-link
+          to="/profile"
+          class="group flex items-center gap-2.5 p-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all duration-200"
+        >
+          <div
+            class="w-9 h-9 shrink-0 rounded-lg flex items-center justify-center bg-teal-500/20 text-cyan-200 border border-teal-400/30 group-hover:bg-teal-500/30 transition-colors"
+          >
+            <Icon :icon="roleIcon" class="w-5 h-5" />
+          </div>
+
+          <div class="min-w-0 flex-1">
+            <p class="text-xs font-bold text-white truncate leading-tight">{{ doctorName }}</p>
+            <p class="text-[10px] text-cyan-200/60 truncate mt-0.5">{{ roleLabel }}</p>
+          </div>
+
+          <Icon icon="mdi:chevron-left" class="w-4 h-4 shrink-0 text-cyan-200/40" />
+        </router-link>
+      </footer>
     </div>
   </aside>
 </template>
 
 <script setup>
-import { onMounted, ref, computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { useI18n } from 'vue-i18n'
+import { Icon } from '@iconify/vue'
 import api from '../api'
 import { usePatientStore } from '../stores/patient'
 import { useDoctorStore } from '../stores/doctor'
+import { useAlertsStore } from '../stores/alerts'
 
 const router = useRouter()
 const store = usePatientStore()
 const doctorStore = useDoctorStore()
-const { locale } = useI18n()
+const alertsStore = useAlertsStore()
 const patients = ref([])
 
+/* Doctor Details */
 const doctorName = computed(() => doctorStore.name || 'طبيب')
+
 const doctorInitials = computed(() => {
-  const name = doctorName.value
-  const parts = name.trim().split(' ')
-  if (parts.length >= 2 && parts[1].length > 0) return (parts[0][0] + parts[1][0]).toUpperCase()
-  return name.substring(0, 2).toUpperCase()
+  const parts = doctorName.value.trim().split(' ')
+  return parts.length > 1 ? `${parts[0][0]}${parts[1][0]}`.toUpperCase() : doctorName.value.substring(0, 2).toUpperCase()
 })
 
-const toggleLanguage = () => {
-  locale.value = locale.value === 'ar' ? 'en' : 'ar'
-}
+const roleLabel = computed(() => {
+  if (isAdmin.value) return 'مشرف النظام'
+  const role = doctorStore.role || ''
+  if (role === 'doctor') return 'طبيب معالج'
+  if (role === 'caregiver' || role === 'nurse') return 'مقدم رعاية'
+  return 'طبيب'
+})
 
-const openAddPatient = () => {
-  store.showAddModal = true
-}
+// أيقونة الدور من Iconify
+const roleIcon = computed(() => {
+  if (isAdmin.value) return 'eos-icons:admin'
+  const role = doctorStore.role || ''
+  if (role === 'doctor') return 'maki:doctor'
+  if (role === 'caregiver' || role === 'nurse') return 'mdi:hand-heart'
+  return 'mdi:account'
+})
 
+/* Permissions */
+const isAdmin = computed(() => {
+  const role = doctorStore.role || localStorage.getItem('user_role')
+  const superuser = doctorStore.is_superuser || localStorage.getItem('is_superuser') === 'true'
+  return role === 'admin' || superuser === true
+})
+
+/* Navigation Items */
+const navigation = [
+  {
+    label: 'الكادر الطبي والأطباء',
+    to: '/doctors',
+    icon: 'mdi:doctor',
+    allowedRoles: ['admin', 'doctor'] // مقدم الرعاية لا يراها
+  },
+  {
+    label: 'البروتوكولات السريرية',
+    to: '/protocols',
+    icon: 'mdi:file-document-outline',
+    allowedRoles: ['admin', 'doctor'] // مقدم الرعاية لا يراها
+  },
+  {
+    label: 'التنبيهات السريرية',
+    to: '/alerts',
+    icon: 'mdi:bell-outline',
+    allowedRoles: ['admin', 'doctor', 'caregiver', 'nurse']
+  },
+  {
+    label: 'الإعدادات',
+    to: '/settings',
+    icon: 'mdi:cog-outline',
+    allowedRoles: ['admin', 'doctor', 'caregiver', 'nurse']
+  }
+]
+
+const visibleNavigation = computed(() => {
+  const currentRole = doctorStore.role || localStorage.getItem('user_role') || 'doctor'
+  return navigation.filter(item => {
+    if (!item.allowedRoles) return true
+    return item.allowedRoles.includes(currentRole) || (isAdmin.value && item.allowedRoles.includes('admin'))
+  })
+})
+
+/* Patient Handling */
 const fetchPatients = async () => {
   try {
-    const res = await api.get('/api/monitored-elements/')
-    const data = Array.isArray(res.data) ? res.data : (res.data.results || [])
-    patients.value = data
-    store.patients = data
-  } catch (e) {
-    console.error('فشل جلب المرضى:', e)
+    const { data } = await api.get('/api/monitored-elements/')
+    patients.value = Array.isArray(data) ? data : data.results || []
+    store.patients = patients.value
+    
+    // 🟢 تفعيل قنوات البث السوكيت لكافة المرضى المسندين دفعة واحدة للاستماع الفوري
+    alertsStore.setupAllWebSockets(patients.value)
+    
+    patients.value.forEach(patient => alertsStore.updatePatientAlertState(patient.id))
+  } catch (error) {
+    console.error('فشل جلب المرضى:', error)
   }
 }
 
-const selectPatient = (patient) => {
+// 🟢 تصنيف وفرز المرضى فورياً: المرضى ذوي الخطورة العالية يصعدون لقمة السايدبار بالثانية (أحمر ثم برتقالي ثم مستقر)
+const sortedPatients = computed(() => {
+  return [...patients.value].sort((a, b) => {
+    const aState = alertsStore.patientAlertStates[a.id]
+    const bState = alertsStore.patientAlertStates[b.id]
+    
+    // إعطاء أوزان فسيولوجية للأولويات
+    const aWeight = aState === 'CRITICAL' ? 2 : (aState === 'HIGH' ? 1 : 0)
+    const bWeight = bState === 'CRITICAL' ? 2 : (bState === 'HIGH' ? 1 : 0)
+    
+    return bWeight - aWeight // تنازلياً لوضع مريض الخطر الحرج ثم المتوسط في الصدارة
+  })
+})
+
+const patientClasses = patient => {
+  const selected = store.currentPatient?.id === patient.id
+  const alertState = alertsStore.patientAlertStates[patient.id] // 'CRITICAL' أو 'HIGH' أو null
+  
+  if (alertState === 'CRITICAL') {
+    return [
+      'patient-item',
+      selected ? 'patient-item-alert-selected' : 'patient-item-alert'
+    ]
+  } else if (alertState === 'HIGH') {
+    return [
+      'patient-item',
+      selected ? 'patient-item-alert-high-selected' : 'patient-item-alert-high'
+    ]
+  }
+  
+  return [
+    'patient-item',
+    selected ? 'patient-item-selected' : 'patient-item-default'
+  ]
+}
+
+const selectPatient = patient => {
   store.selectPatient(patient)
   store.isSidebarOpen = false
   router.push('/dashboard')
 }
 
-const logout = () => {
-  localStorage.removeItem('token')
-  doctorStore.clearProfile()
-  router.push('/login')
-}
-
+/* تهيئة الحالة */
 if (store.isSidebarOpen === undefined) store.isSidebarOpen = false
 if (store.showAddModal === undefined) store.showAddModal = false
-
 onMounted(fetchPatients)
 </script>
 
 <style scoped>
-/* شريط التمرير مخصص للمقروئية داخل الخلفية التركوازية */
+.nav-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.55rem 0.75rem;
+  border-radius: 0.5rem;
+  color: rgba(207, 250, 254, 0.75);
+  transition: all 150ms ease;
+}
+.nav-link:hover { color: #fff; background: rgba(255,255,255,0.08); }
+.nav-link-active { color: #fff; background: rgba(255,255,255,0.12); }
+
+.add-patient-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.875rem;
+  border-radius: 0.5rem;
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: #0d9488;
+  border: 1px solid rgba(255,255,255,0.15);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  transition: all 150ms ease;
+}
+.add-patient-btn:hover { background: #14b8a6; transform: translateY(-1px); }
+
+.patient-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.65rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 150ms ease;
+}
+.patient-item-default { color: rgba(207,250,254,0.85); }
+.patient-item-default:hover { color: #fff; background: rgba(255,255,255,0.06); }
+.patient-item-selected { color: #fff; background: rgba(255,255,255,0.12); border-color: rgba(45,212,191,0.3); }
+
+/* تلوين الحالات الحرجة (النبض السريع والأحمر) */
+.patient-item-alert { color: #ffe4e6; background: rgba(225,29,72,0.15); border-color: rgba(244,63,94,0.3); }
+.patient-item-alert-selected { color: #fff; background: rgba(225,29,72,0.35); border-color: rgba(244,63,94,0.6); }
+
+/* 🟢 تلوين الحالات المتوسطة (النبض الهادئ والبرتقالي الخافت بالـ Sidebar) */
+.patient-item-alert-high { color: #fef3c7; background: rgba(245,158,11,0.15); border-color: rgba(245,158,11,0.3); }
+.patient-item-alert-high:hover { color: #fff; background: rgba(245,158,11,0.25); }
+.patient-item-alert-high-selected { color: #fff; background: rgba(245,158,11,0.35); border-color: rgba(245,158,11,0.6); }
+
+.patient-count-badge {
+  font-size: 10px;
+  font-family: monospace;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(255,255,255,0.08);
+  color: #cffafe;
+}
+
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(103,232,249,0.2) transparent;
+}
 .custom-scrollbar::-webkit-scrollbar { width: 4px; }
 .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-.custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.2); border-radius: 10px; }
-.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.4); }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(103,232,249,0.2); border-radius: 999px; }
+.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(103,232,249,0.4); }
 </style>

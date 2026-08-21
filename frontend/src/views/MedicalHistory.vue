@@ -1,204 +1,634 @@
 <!-- MedicalHistory.vue -->
 <template>
-  <div class="min-h-screen bg-[#F0F6F5] text-slate-600 p-4 md:p-6" dir="rtl">
+  <div class="w-full min-h-screen bg-[#F0F6F5] text-slate-600 font-sans antialiased p-6 flex flex-col gap-6" dir="rtl">
     
-    <!-- هيدر الاستمارة السريرية المشرق والعائم -->
-    <header class="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-slate-100 px-6 py-4 mb-6 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm shadow-slate-100/30">
-      <div class="flex items-center gap-4">
-        <button @click="$router.back()" class="text-slate-400 hover:text-teal-600 transition-colors p-1.5 bg-slate-50 hover:bg-slate-100 rounded-xl border border-slate-100">
-          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7" />
-          </svg>
-        </button>
-        <div>
-          <h1 class="text-xl font-extrabold text-slate-800 tracking-tight">{{ patientInfo.full_name || 'الملف الطبي للمريض' }}</h1>
-          <p class="text-xs text-slate-400 font-medium mt-1">تحديث البيانات الديموغرافية والطبية التي تؤثر على نموذج التنبؤ</p>
+    <!-- هيدر الشاشة البارز والمنقح -->
+    <header class="w-full bg-white rounded-3xl border border-slate-200/80 p-6 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 select-none">
+      <div>
+        <div class="flex items-center gap-2 mb-1">
+          <span class="text-xs text-teal-600 font-mono font-extrabold uppercase tracking-wider">سجل الملف الطبي</span>
+          <span class="text-xs bg-teal-50 text-teal-700 px-2.5 py-0.5 rounded-full font-bold">صلاحيات الطبيب المعالج</span>
         </div>
+        <h1 class="text-2xl font-extrabold text-slate-800 tracking-tight">إدارة الملف الطبي للمريض: {{ patientName }}</h1>
+        <p class="text-xs text-slate-400 mt-1">تحديث البيانات الديموغرافية، التاريخ المرضي، إدارة مقدمي الرعاية، والتحكم بالقواعد السريرية الخاصة</p>
       </div>
-      
-      <!-- زر حفظ التغييرات المتناسق -->
-      <button @click="saveAll" class="bg-[#0D9488] hover:bg-[#0f766e] text-white text-xs font-bold px-6 py-3 rounded-xl shadow-md shadow-teal-900/10 transition-all duration-200">
-        حفظ التغييرات السريرية
-      </button>
+
+      <!-- أزرار الرجوع وحفظ التغييرات الشاملة للملف الشخصي والسريري -->
+      <div class="flex items-center gap-2.5">
+        <button 
+          @click="router.push('/dashboard')" 
+          class="px-5 py-2.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-500 font-bold text-xs transition-all shadow-xs"
+        >
+          لوحة المراقبة
+        </button>
+        <button 
+          @click="saveAllChanges" 
+          class="bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs px-6 py-2.5 rounded-xl shadow-sm hover:shadow transition-all"
+        >
+          حفظ التغييرات السريرية
+        </button>
+      </div>
     </header>
 
-    <!-- مؤشر التحميل المضيء والناعم -->
-    <div v-if="loading" class="flex items-center justify-center h-64">
-      <div class="animate-spin rounded-full h-8 w-8 border-2 border-teal-500 border-t-transparent"></div>
-    </div>
-
-    <!-- النموذج الرشيق والمبسط المتطابق مع النموذج الرياضي -->
-    <div v-else class="max-w-3xl mx-auto space-y-6">
+    <!-- الهيكل المنظم للملف الطبي -->
+    <main class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start w-full">
       
-      <!-- ========== 1. قسم المعلومات الشخصية (تؤثر على السن والجنس في الموديل) ========== -->
-      <section class="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm shadow-slate-100/50 space-y-4">
-        <h2 class="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2">
-          <div class="w-7 h-7 rounded-full bg-teal-50 flex items-center justify-center text-teal-600">
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
-          </div>
-          <span>المعلومات الشخصية والديموغرافية</span>
-        </h2>
+      <!-- العمود الأيمن: السوابق الطبية وإدارة كادر مقدمي الرعاية -->
+      <div class="lg:col-span-5 flex flex-col gap-6">
         
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label class="text-[10px] font-bold text-slate-400 uppercase">الاسم الكامل</label>
-            <input v-model="patientInfo.full_name" type="text" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-700 mt-1 focus:outline-none focus:border-teal-500" />
-          </div>
-          <div>
-            <label class="text-[10px] font-bold text-slate-400 uppercase">تاريخ الميلاد</label>
-            <input v-model="patientInfo.date_of_birth" type="date" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-700 mt-1 focus:outline-none focus:border-teal-500" />
-          </div>
-          <div>
-            <label class="text-[10px] font-bold text-slate-400 uppercase">الجنس</label>
-            <select v-model="patientInfo.gender" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-700 mt-1 focus:outline-none focus:border-teal-500 cursor-pointer">
-              <option value="M">ذكر</option>
-              <option value="F">أنثى</option>
-            </select>
-          </div>
-          <div>
-            <label class="text-[10px] font-bold text-slate-400 uppercase">تصنيف الحالة</label>
-            <select v-model="patientInfo.element_type" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-700 mt-1 focus:outline-none focus:border-teal-500 cursor-pointer">
-              <option value="patient">مريض (Patient)</option>
-              <option value="elderly">مسن (Elderly)</option>
-              <option value="disabled">ذو إعاقة (Disabled)</option>
-            </select>
+        <!-- 1. البيانات الديموغرافية الأساسية للمريض القابلة للتعديل والتحرير -->
+        <div class="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-sm space-y-4">
+          <h3 class="font-extrabold text-slate-800 text-xs flex items-center gap-2 pb-3 border-b border-slate-100">
+            <span class="w-5 h-5 bg-teal-50 text-teal-700 font-bold rounded-lg flex items-center justify-center border border-teal-100 font-mono">1</span>
+            <span>البيانات الديموغرافية الأساسية للمريض</span>
+          </h3>
+
+          <div class="space-y-3.5 text-xs">
+            <div>
+              <label class="block text-sm font-bold text-slate-700 mb-1.5">الاسم الكامل للمريض <span class="text-rose-500">*</span></label>
+              <input 
+                v-model="patientForm.full_name" 
+                type="text" 
+                required 
+                class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 focus:bg-white focus:border-teal-500 outline-none font-bold text-slate-900" 
+              />
+            </div>
+
+            <div>
+              <label class="block text-sm font-bold text-slate-700 mb-1.5">تاريخ الميلاد <span class="text-rose-500">*</span></label>
+              <input 
+                v-model="patientForm.date_of_birth" 
+                type="date" 
+                required 
+                class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 focus:bg-white focus:border-teal-500 outline-none font-bold text-slate-900" 
+              />
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-sm font-bold text-slate-700 mb-1.5">الجنس <span class="text-rose-500">*</span></label>
+                <select v-model="patientForm.gender" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 outline-none font-bold text-slate-900">
+                  <option value="M">ذكر (Male)</option>
+                  <option value="F">أنثى (Female)</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-sm font-bold text-slate-700 mb-1.5">تصنيف الحالة</label>
+                <select v-model="patientForm.element_type" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 outline-none font-bold text-slate-900">
+                  <option value="patient">مريض (Patient)</option>
+                  <option value="elderly">مسن رعاية (Elderly)</option>
+                  <option value="disabled">احتياجات خاصة (Disabled)</option>
+                </select>
+              </div>
+            </div>
           </div>
         </div>
-      </section>
 
-      <!-- ========== 2. قسم التاريخ الطبي الفعلي (يؤثر على السكر والضغط والقلب في الموديل) ========== -->
-      <section class="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm shadow-slate-100/50 space-y-5">
-        <h2 class="text-sm font-bold text-slate-800 mb-2 flex items-center gap-2">
-          <div class="w-7 h-7 rounded-full bg-rose-50 flex items-center justify-center text-rose-500">
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+        <!-- 2. بطاقة السوابق الطبية والأمراض المزمنة -->
+        <div class="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-sm space-y-4">
+          <h3 class="font-extrabold text-slate-800 text-xs flex items-center gap-2 pb-3 border-b border-slate-100">
+            <span class="w-5 h-5 bg-teal-50 text-teal-700 font-bold rounded-lg flex items-center justify-center border border-teal-100 font-mono">2</span>
+            <span>التاريخ الطبي والمزمن الفعلي للمريض</span>
+          </h3>
+
+          <div class="space-y-3">
+            <label class="flex items-start gap-3 bg-slate-50/50 p-4 border border-slate-200 rounded-2xl cursor-pointer hover:bg-slate-50 transition-colors">
+              <input type="checkbox" v-model="medicalHistoryFlags.heart_disease" class="rounded text-teal-600 focus:ring-teal-500/50 w-4 h-4 mt-0.5" />
+              <div>
+                <p class="text-sm font-bold text-slate-750">التاريخ المرضي لأمراض القلب (Heart Disease)</p>
+                <p class="text-[10px] text-slate-400 mt-0.5 font-medium">قصور القلب، احتشاء عضلة القلب، أو الذبحة الصدرية السابقة</p>
+              </div>
+            </label>
+
+            <label class="flex items-start gap-3 bg-slate-50/50 p-4 border border-slate-200 rounded-2xl cursor-pointer hover:bg-slate-50 transition-colors">
+              <input type="checkbox" v-model="medicalHistoryFlags.chronic_conditions" class="rounded text-teal-600 focus:ring-teal-500/50 w-4 h-4 mt-0.5" />
+              <div>
+                <p class="text-xs font-bold text-slate-750">الإصابة بأمراض مزمنة عامة (Chronic Conditions)</p>
+                <p class="text-[10px] text-slate-400 mt-0.5 font-medium">داء السكري (Type 2 Diabetes)، أو ارتفاع ضغط الدم (Hypertension)</p>
+              </div>
+            </label>
           </div>
-          <span>التاريخ الطبي والمزمن الفعلي للمريض</span>
-        </h2>
-        
-        <div class="space-y-4 pt-2">
-          <!-- 🟢 خيار 1: أمراض القلب والشرايين (has_heart_disease) -->
-          <label class="flex items-center gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-150 cursor-pointer hover:bg-slate-100/50 transition-colors select-none">
-            <input v-model="hasHeartDisease" type="checkbox" class="w-4 h-4 text-teal-600 border-slate-300 rounded focus:ring-teal-500 cursor-pointer" />
-            <div class="flex flex-col">
-              <span class="text-xs font-bold text-slate-700">التاريخ المرضي لأمراض القلب (Heart Disease)</span>
-              <span class="text-[10px] text-slate-400 mt-0.5">يشمل: قصور القلب، احتشاء عضلة القلب، أو الذبحة الصدرية السابقة</span>
-            </div>
-          </label>
-
-          <!-- 🟢 خيار 2: الأمراض المزمنة الأخرى (has_chronic_condition) -->
-          <label class="flex items-center gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-150 cursor-pointer hover:bg-slate-100/50 transition-colors select-none">
-            <input v-model="hasChronicCondition" type="checkbox" class="w-4 h-4 text-teal-600 border-slate-300 rounded focus:ring-teal-500 cursor-pointer" />
-            <div class="flex flex-col">
-              <span class="text-xs font-bold text-slate-700">الإصابة بأمراض مزمنة عامة (Chronic Conditions)</span>
-              <span class="text-[10px] text-slate-400 mt-0.5">يشمل: داء السكري (Type 2 Diabetes)، أو ارتفاع ضغط الدم (Hypertension)</span>
-            </div>
-          </label>
         </div>
-      </section>
 
+        <!-- 3. بطاقة إدارة الكادر المتعدد لمقدمي الرعاية (تعرض الجميع مع إسناد وحذف وتعديل معدد) -->
+        <div class="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-sm space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+            <h3 class="font-extrabold text-slate-800 text-xs flex items-center gap-2">
+              <span class="w-5 h-5 bg-teal-50 text-teal-700 font-bold rounded-lg flex items-center justify-center border border-teal-100 font-mono">3</span>
+              <span>مقدمو الرعاية المتابعون للحالة (Caregivers)</span>
+            </h3>
+
+            <button 
+              @click="openAssignCaregiverModal" 
+              class="text-[10px] font-bold text-teal-700 bg-teal-50 hover:bg-teal-100 border border-teal-200 px-3 py-1.5 rounded-xl transition-all"
+            >
+              + إسناد مقدم رعاية
+            </button>
+          </div>
+
+          <div v-if="loadingCaregivers" class="text-center py-6 text-xs text-slate-400 font-bold animate-pulse">
+            جاري تحميل كادر مقدمي الرعاية...
+          </div>
+
+          <div v-else-if="assignedCaregivers.length === 0" class="text-center py-6 text-xs text-slate-400 font-bold border border-dashed border-slate-200 rounded-2xl">
+            لا يوجد مقدمو رعاية مسندون لمتابعة هذا المريض حالياً.
+          </div>
+
+          <!-- جدول السجلات لمقدمي الرعاية المتابعين -->
+          <div v-else class="w-full overflow-hidden border border-slate-200 rounded-2xl">
+            <table class="w-full text-right border-collapse text-[11px]">
+              <thead class="bg-slate-50 border-b border-slate-200">
+                <tr class="text-slate-500 font-bold">
+                  <th class="p-2.5 pr-4">الاسم</th>
+                  <th class="p-2.5">اسم المستخدم</th> <!-- 🟢 تم إضافة عمود اسم المستخدم هنا -->
+                  <th class="p-2.5">رقم الهاتف</th>
+                  <th class="p-2.5 text-left pl-4">الإجراءات</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+                <tr v-for="care in assignedCaregivers" :key="care.id" class="hover:bg-slate-50/50">
+                  <td class="p-2.5 pr-4 font-bold text-slate-800">{{ care.full_name }}</td>
+                  <td class="p-2.5 font-mono text-slate-500 font-bold">@{{ care.username }}</td> <!-- 🟢 تم عرض اسم المستخدم للمستودع بالـ @ -->
+                  <td class="p-2.5 font-mono text-slate-600 font-bold">{{ care.phone_number || 'غير مضاف' }}</td>
+                  <td class="p-2.5 text-left pl-4">
+                    <div class="flex items-center justify-end gap-1.5">
+                      <button @click="openEditCaregiverModal(care)" class="text-[9px] font-bold text-sky-700 bg-sky-50 border border-sky-100 px-2.5 py-1 rounded-lg">تعديل</button>
+                      <button @click="removeCaregiver(care.id)" class="text-[9px] font-bold text-rose-600 bg-rose-50 border border-rose-100 px-2.5 py-1 rounded-lg">حذف</button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- العمود الأيسر: 4. القواعد والبروتوكولات السريرية الخاصة والمخصصة للمريض حصراً -->
+      <div class="lg:col-span-7 bg-white rounded-3xl border border-slate-200/80 p-6 shadow-sm flex flex-col gap-4">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+          <h3 class="font-extrabold text-slate-800 text-xs flex items-center gap-2">
+            <span class="w-5 h-5 bg-teal-50 text-teal-700 font-bold rounded-lg flex items-center justify-center border border-teal-100 font-mono">4</span>
+            <span>البروتوكولات السريرية الخاصة بالمريض</span>
+          </h3>
+
+          <!-- زر توجيه الطبيب لباني القواعد الخاص بالمريض -->
+          <button 
+            @click="router.push(`/patients/${patientId}/rules/new`)" 
+            class="text-[11px] font-bold text-teal-700 bg-teal-50 hover:bg-teal-100 border border-teal-200 px-3 py-1.5 rounded-xl transition-all"
+          >
+            + إضافة قاعدة فسيولوجية مخصصة
+          </button>
+        </div>
+
+        <div v-if="loadingRules" class="text-center py-6 text-xs text-slate-400 font-bold animate-pulse">
+          جاري جلب القواعد المخصصة للمريض...
+        </div>
+
+        <div v-else-if="customRules.length === 0" class="text-center py-12 text-xs text-slate-400 font-bold border border-dashed border-slate-200 rounded-3xl">
+          لا توجد قواعد مخصصة مضافة لهذا المريض حالياً، يطبق النظام البروتوكولات العامة للمستشفى فقط.
+        </div>
+
+        <div v-else class="space-y-3">
+          <div 
+            v-for="rule in customRules" 
+            :key="rule.id" 
+            class="p-4 bg-slate-50/50 border border-slate-200 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+          >
+            <div>
+              <div class="flex items-center gap-2 mb-1.5">
+                <span class="text-[10px] bg-rose-50 text-rose-700 font-extrabold px-2.5 py-0.5 rounded-full border border-rose-200 font-mono">
+                  {{ rule.severity }}
+                </span>
+                <h4 class="font-extrabold text-slate-800 text-xs">{{ rule.name }}</h4>
+              </div>
+              <p class="text-[10px] text-slate-400 font-semibold leading-relaxed">التوصية: {{ rule.action_template }}</p>
+            </div>
+
+            <!-- أزرار الإجراءات الخاصة بقاعدة المريض الفردي -->
+            <div class="flex items-center gap-2 flex-shrink-0">
+              <button 
+                @click="router.push(`/patients/${patientId}/rules/edit/${rule.id}`)"
+                class="text-[11px] font-bold text-sky-700 bg-sky-50 hover:bg-sky-100 border border-sky-200 px-3 py-1.5 rounded-xl transition-all"
+              >
+                تعديل
+              </button>
+              <button 
+                @click="deleteCustomRule(rule.id)"
+                class="text-[11px] font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200 px-3 py-1.5 rounded-xl transition-all"
+              >
+                حذف
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+
+    <!-- منبثقة إسناد أو إنشاء حساب مقدم رعاية معتمد -->
+    <div v-if="showAssignModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-55 flex items-center justify-center p-4">
+      <div class="bg-white rounded-3xl border border-slate-200 shadow-xl w-full max-w-md p-6 space-y-4" dir="rtl">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+          <h3 class="text-sm font-extrabold text-slate-800">إسناد أو إنشاء حساب مقدم رعاية للمريض</h3>
+          <button @click="showAssignModal = false" class="text-slate-400 hover:text-slate-600 font-bold text-xl">✕</button>
+        </div>
+
+        <div class="space-y-4 text-xs">
+          <div>
+            <label class="block font-bold text-slate-600 mb-1.5">خيارات مقدم الرعاية</label>
+            <select v-model="caregiverForm.option" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 outline-none font-bold text-slate-900">
+              <option value="existing">اختيار مقدم رعاية مسجّل مسبقاً</option>
+              <option value="new">إنشاء حساب جديد كلياً لمقدم الرعاية</option>
+            </select>
+          </div>
+
+          <!-- أ. في حال اختيار مقدم رعاية مسجل مسبقاً -->
+          <div v-if="caregiverForm.option === 'existing'" class="space-y-2">
+            <label class="block font-bold text-slate-600 mb-1">اختر مقدم الرعاية من القائمة</label>
+            <select v-model="caregiverForm.existing_id" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 outline-none font-bold text-slate-900">
+              <option v-for="care in allCaregivers" :key="care.id" :value="care.id">
+                {{ care.full_name }} (@{{ care.username }})
+              </option>
+            </select>
+          </div>
+
+          <!-- ب. في حال إنشاء حساب جديد لمقدم الرعاية -->
+          <div v-if="caregiverForm.option === 'new'" class="space-y-3 p-3 bg-slate-50 rounded-2xl border border-slate-100">
+            <div>
+              <label class="block text-[10px] font-bold text-slate-500 mb-1">الاسم الكامل لمقدم الرعاية</label>
+              <input v-model="caregiverForm.full_name" type="text" required class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 outline-none font-bold text-slate-900" />
+            </div>
+            <div>
+              <label class="block text-[10px] font-bold text-slate-500 mb-1">اسم المستخدم (Username)</label>
+              <input v-model="caregiverForm.username" type="text" required class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 outline-none font-bold font-mono text-slate-900" />
+            </div>
+            <div>
+              <label class="block text-[10px] font-bold text-slate-500 mb-1">رقم هاتف مقدم الرعاية</label>
+              <input v-model="caregiverForm.phone_number" type="text" placeholder="+218900000000" class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 outline-none font-bold font-mono text-slate-900" />
+            </div>
+            <div>
+              <label class="block text-[10px] font-bold text-slate-500 mb-1">كلمة المرور</label>
+              <input v-model="caregiverForm.password" type="password" required placeholder="••••••••" class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 outline-none font-bold text-slate-900" />
+            </div>
+          </div>
+
+          <div class="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+            <button type="button" @click="showAssignModal = false" class="px-4 py-2 rounded-xl text-slate-500 font-bold hover:bg-slate-100">إلغاء</button>
+            <button @click="submitAssignCaregiver" class="bg-teal-600 hover:bg-teal-700 text-white font-bold px-5 py-2 rounded-xl shadow-xs">حفظ وإسناد مقدم الرعاية</button>
+          </div>
+        </div>
+      </div>
     </div>
+
+    <!-- منبثقة تعديل بيانات مقدم الرعاية (Edit Caregiver Modal) -->
+    <div v-if="showEditCaregiverModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-55 flex items-center justify-center p-4">
+      <div class="bg-white rounded-3xl border border-slate-200 shadow-xl w-full max-w-md p-6 space-y-4" dir="rtl">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+          <h3 class="text-sm font-extrabold text-slate-800">تعديل بيانات حساب مقدم الرعاية</h3>
+          <button @click="showEditCaregiverModal = false" class="text-slate-400 hover:text-slate-600 font-bold text-xl">✕</button>
+        </div>
+
+        <form @submit.prevent="submitEditCaregiver" class="space-y-4 text-xs">
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">الاسم الكامل لمقدم الرعاية</label>
+            <input v-model="editCaregiverForm.full_name" type="text" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:bg-white focus:border-teal-500 outline-none font-bold text-slate-900" />
+          </div>
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">اسم المستخدم (Username)</label>
+            <input v-model="editCaregiverForm.username" type="text" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:bg-white focus:border-teal-500 outline-none font-bold text-slate-900 font-mono" />
+          </div>
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">رقم الهاتف للتواصل والـ SMS</label>
+            <input v-model="editCaregiverForm.phone_number" type="text" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:bg-white focus:border-teal-500 outline-none font-bold text-slate-900 font-mono" />
+          </div>
+
+          <div class="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+            <button type="button" @click="showEditCaregiverModal = false" class="px-4 py-2 rounded-xl text-slate-500 font-bold hover:bg-slate-100">إلغاء</button>
+            <button type="submit" class="bg-sky-600 hover:bg-sky-700 text-white font-bold px-5 py-2 rounded-xl shadow-xs">حفظ التعديلات</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { ref, computed, onMounted, watch } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import api from '../api'
 
-const route = useRoute()
 const router = useRouter()
-const patientId = route.params.id
-const loading = ref(true)
+const route = useRoute()
+const patientId = ref(route.params.id)
 
-// معلومات المريض الشخصية
-const patientInfo = reactive({
+const patientName = ref('المريض')
+const patientData = ref({})
+const loading = ref(true)
+const loadingRules = ref(true)
+const loadingCaregivers = ref(true)
+
+const assignedCaregivers = ref([])
+const allCaregivers = ref([])
+const showAssignModal = ref(false)
+const showEditCaregiverModal = ref(false)
+
+// استمارة بيانات المريض الشخصية الأساسية القابلة للتعديل والتحكم بالكامل
+const patientForm = ref({
   full_name: '',
   date_of_birth: '',
   gender: 'M',
   element_type: 'patient'
 })
 
-// 🟢 متغيرات التحكم الثنائية البسيطة المتوافقة مع منطق الـ ML والـ 22 ميزة
-const hasHeartDisease = ref(false)
-const hasChronicCondition = ref(false)
+const caregiverForm = ref({
+  option: 'existing',
+  existing_id: null,
+  full_name: '',
+  username: '',
+  phone_number: '',
+  password: ''
+})
 
-onMounted(async () => {
+const editCaregiverForm = ref({ id: null, full_name: '', username: '', phone_number: '' })
+const customRules = ref([])
+
+const medicalHistoryFlags = ref({
+  heart_disease: false,
+  chronic_conditions: false
+})
+
+const patientInitials = computed(() => {
+  const name = patientName.value
+  const parts = name.trim().split(' ')
+  if (parts.length >= 2 && parts[1].length > 0) return parts[0][0] + parts[1][0]
+  return name.substring(0, 2)
+})
+
+const fetchPatientDetails = async () => {
+  loading.value = true
   try {
-    // جلب بيانات المريض الشخصية
-    const patientRes = await api.get(`/api/monitored-elements/${patientId}/`)
-    Object.assign(patientInfo, {
-      full_name: patientRes.data.full_name,
-      date_of_birth: patientRes.data.date_of_birth,
-      gender: patientRes.data.gender,
-      element_type: patientRes.data.element_type
-    })
+    const res = await api.get(`/api/monitored-elements/${patientId.value}/`)
+    patientData.value = res.data
+    patientName.value = res.data.full_name
 
-    // جلب التاريخ الطبي
-    const historyRes = await api.get('/api/medical-histories/', { params: { monitored_element: patientId } })
-    const data = Array.isArray(historyRes.data) ? historyRes.data : (historyRes.data.results || [])
+    // تعبئة حقول تعديل البيانات الأساسية لـ patientForm بدقة
+    patientForm.value = {
+      full_name: res.data.full_name || '',
+      date_of_birth: res.data.date_of_birth || '',
+      gender: res.data.gender || 'M',
+      element_type: res.data.element_type || 'patient'
+    }
+
+    // استرداد السجل الطبي الفعلي
+    const medRes = await api.get('/api/medical-histories/', {
+      params: { monitored_element: patientId.value }
+    })
+    const history = medRes.data?.[0] || (medRes.data.results?.[0])
     
-    if (data.length > 0) {
-      const h = data[0]
-      const conditions = h.chronic_conditions || []
+    if (history) {
+      const conditions = history.chronic_conditions || []
       
-      // 🟢 فك وتوزيع الميزات من الـ JSON المخزن في قاعدة البيانات لتفعيل خانات الاختيار
-      const condNames = conditions.map(c => typeof c === 'string' ? c.toLowerCase() : String(c.name || '').toLowerCase())
-      hasHeartDisease.value = condNames.some(c => ['heart_disease', 'heart_failure', 'cardiac', '410', '428', 'i50', 'i21'].includes(c))
-      hasChronicCondition.value = condNames.some(c => ['diabetes', 'hypertension', 'copd', '401', '250', 'e11', 'i10'].includes(c))
+      // دالة الخيارات الطبية الفسلوجية المقاومة للأخطاء
+      const condNames = conditions.map(c => {
+        if (typeof c === 'string') return c.toLowerCase()
+        if (c && typeof c === 'object') return (c.name || '').toLowerCase()
+        return ''
+      })
+      
+      medicalHistoryFlags.value = {
+        heart_disease: condNames.includes('heart_disease'),
+        chronic_conditions: condNames.includes('diabetes')
+      }
     }
   } catch (e) {
-    console.error('فشل جلب الملف الطبي:', e)
+    console.error('فشل استعادة السجل الطبي وتفاصيل المريض:', e)
   } finally {
     loading.value = false
   }
-})
+}
 
-// حفظ وإرسال التغييرات ومزامنتها بدقة فسيولوجية
-const saveAll = async () => {
+// جلب مقدمي الرعاية المسندين للمريض حالياً عبر الـ ManyToMany
+const fetchAssignedCaregivers = async () => {
+  loadingCaregivers.value = true
   try {
-    // 1. تحديث بيانات المريض الشخصية
-    await api.patch(`/api/monitored-elements/${patientId}/`, {
-      full_name: patientInfo.full_name,
-      date_of_birth: patientInfo.date_of_birth,
-      gender: patientInfo.gender,
-      element_type: patientInfo.element_type
+    const res = await api.get('/api/caregivers/', {
+      params: { monitored_element: patientId.value }
     })
-
-    // 2. تحديث أو إنشاء التاريخ الطبي الفعلي لربط الخواص لـ الـ ML
-    const checkRes = await api.get('/api/medical-histories/', { params: { monitored_element: patientId } })
-    const existing = Array.isArray(checkRes.data) ? checkRes.data : (checkRes.data.results || [])
-
-    // 🟢 تجميع الميزات المختارة محلياً وصياغتها كـ JSON متوافق مع فك الترميز في الباك إند
-    const conditions = []
-    if (hasHeartDisease.value) {
-      conditions.push({ name: 'heart_disease' })
-    }
-    if (hasChronicCondition.value) {
-      conditions.push({ name: 'diabetes' }) // يُفسر في الـ ML كـ has_chronic_condition
-    }
-
-    const payload = {
-      monitored_element: parseInt(patientId),
-      chronic_conditions: conditions,
-      allergies: [],
-      medications: [],
-      lifestyle: { smoking: 'never', alcohol: 'never', exercise: 'low', bmi: 22 },
-      family_history: [],
-      previous_surgeries: []
-    }
-
-    if (existing.length > 0) {
-      await api.put(`/api/medical-histories/${existing[0].id}/`, payload)
-    } else {
-      await api.post('/api/medical-histories/', payload)
-    }
-
-    alert('تم حفظ وتحديث ملف المريض وتاريخه الطبي بنجاح!')
-    router.push('/dashboard')
+    assignedCaregivers.value = Array.isArray(res.data) ? res.data : (res.data.results || [])
   } catch (e) {
-    console.error('فشل الحفظ التكاملي:', e)
-    const msg = e.response?.data?.detail || 'حدث خطأ أثناء حفظ الملف الطبي'
-    alert(msg)
+    console.error('فشل جلب مقدمي الرعاية المسندين:', e)
+  } finally {
+    loadingCaregivers.value = false
   }
 }
+
+const fetchAllCaregiversList = async () => {
+  try {
+    const res = await api.get('/api/caregivers/')
+    allCaregivers.value = Array.isArray(res.data) ? res.data : (res.data.results || [])
+    if (allCaregivers.value.length > 0) {
+      caregiverForm.value.existing_id = allCaregivers.value[0].id
+    }
+  } catch (e) {
+    console.error('فشل جلب قائمة كافة مقدمي الرعاية:', e)
+  }
+}
+
+// جلب القواعد المخصصة والخاصة بهذا المريض حصراً
+const fetchCustomRules = async () => {
+  loadingRules.value = true
+  try {
+    const res = await api.get('/api/rules/', {
+      params: { monitored_element: patientId.value }
+    })
+    const allRules = Array.isArray(res.data) ? res.data : (res.data.results || [])
+    customRules.value = allRules.filter(r => r.monitored_element === Number(patientId.value))
+  } catch (e) {
+    console.error('فشل جلب القواعد المخصصة للمريض:', e)
+  } finally {
+    loadingRules.value = false
+  }
+}
+
+const openAssignCaregiverModal = async () => {
+  caregiverForm.value = { option: 'existing', existing_id: null, full_name: '', username: '', phone_number: '', password: '' }
+  await fetchAllCaregiversList()
+  showAssignModal.value = true
+}
+
+// إسناد مقدم الرعاية الجديد أو المسجل مسبقاً
+const submitAssignCaregiver = async () => {
+  try {
+    if (caregiverForm.value.option === 'new') {
+      // أ. إنشاء حساب جديد لمقدم الرعاية وربطه بالمريض تلقائياً في الـ ManyToMany بالباك إند
+      await api.post('/api/caregivers/', {
+        username: caregiverForm.value.username,
+        password: caregiverForm.value.password,
+        full_name: caregiverForm.value.full_name,
+        phone_number: caregiverForm.value.phone_number,
+        monitored_element: patientId.value
+      })
+    } else {
+      // ب. تجميع المعرفات الحالية وإلحاق المعرف الجديد وتحديث حقل الـ ManyToMany بـ PATCH
+      const currentIds = assignedCaregivers.value.map(c => c.id)
+      const newId = caregiverForm.value.existing_id
+      
+      if (newId && !currentIds.includes(newId)) {
+        currentIds.push(newId)
+      }
+
+      await api.patch(`/api/monitored-elements/${patientId.value}/`, {
+        caregivers: currentIds
+      })
+    }
+
+    showAssignModal.value = false
+    alert('تم إسناد وربط مقدم الرعاية للحالة بنجاح!')
+    await fetchPatientDetails()
+    await fetchAssignedCaregivers()
+  } catch (e) {
+    console.error('فشل إسناد مقدم الرعاية المعدد:', e)
+    alert('تعذر إتمام العملية، يرجى التأكد من عدم تكرار اسم مستخدم مقدم الرعاية')
+  }
+}
+
+// فتح نافذة تعديل بيانات مقدم الرعاية
+const openEditCaregiverModal = (care) => {
+  editCaregiverForm.value = {
+    id: care.id,
+    full_name: care.full_name || '',
+    username: care.username || '',
+    phone_number: care.phone_number || ''
+  }
+  showEditCaregiverModal.value = true
+}
+
+const submitEditCaregiver = async () => {
+  try {
+    await api.patch(`/api/caregivers/${editCaregiverForm.value.id}/`, {
+      full_name: editCaregiverForm.value.full_name,
+      username: editCaregiverForm.value.username,
+      phone_number: editCaregiverForm.value.phone_number
+    })
+    showEditCaregiverModal.value = false
+    alert('تم تحديث بيانات حساب مقدم الرعاية بنجاح!')
+    await fetchAssignedCaregivers()
+  } catch (e) {
+    console.error('فشل تعديل بيانات مقدم الرعاية:', e)
+  }
+}
+
+// فك ارتباط مقدم الرعاية عن المريض عبر الـ ManyToMany بـ PATCH
+const removeCaregiver = async (caregiverId) => {
+  if (!confirm('هل أنت متأكد من فك ارتباط وإلغاء إسناد مقدم الرعاية عن المريض؟')) return
+  try {
+    const remainingIds = assignedCaregivers.value
+      .map(c => c.id)
+      .filter(id => id !== caregiverId)
+
+    await api.patch(`/api/monitored-elements/${patientId.value}/`, {
+      caregivers: remainingIds
+    })
+
+    alert('تم إلغاء إسناد وفك ارتباط مقدم الرعاية عن المريض.')
+    await fetchPatientDetails()
+    await fetchAssignedCaregivers()
+  } catch (e) {
+    console.error('فشل إلغاء إسناد مقدم الرعاية المعدد:', e)
+  }
+}
+
+const deleteCustomRule = async (id) => {
+  if (!confirm('هل أنت متأكد من رغبتك في حذف هذا البروتوكول المخصص للمريض؟')) return
+  try {
+    await api.delete(`/api/rules/${id}/`)
+    fetchCustomRules()
+  } catch (e) {
+    console.error('فشل حذف القاعدة المخصصة:', e)
+  }
+}
+
+// الحفظ المشترك والمزدوج لكافة التعديلات الشخصية والسريرية معاً
+const saveAllChanges = async () => {
+  try {
+    // 1. تحديث وحفظ بيانات المريض الشخصية الأساسية بـ patientForm
+    await api.patch(`/api/monitored-elements/${patientId.value}/`, {
+      full_name: patientForm.value.full_name,
+      date_of_birth: patientForm.value.date_of_birth,
+      gender: patientForm.value.gender,
+      element_type: patientForm.value.element_type
+    })
+
+    // 2. تحديث وحفظ السجل الفسيولوجي للأمراض المزمنة
+    const chronic_conditions = []
+    if (medicalHistoryFlags.value.heart_disease) {
+      chronic_conditions.push({ name: 'heart_disease' })
+    }
+    if (medicalHistoryFlags.value.chronic_conditions) {
+      chronic_conditions.push({ name: 'diabetes' })
+    }
+
+    const medRes = await api.get('/api/medical-histories/', {
+      params: { monitored_element: patientId.value }
+    })
+    const history = medRes.data?.[0] || (medRes.data.results?.[0])
+
+    if (history) {
+      await api.patch(`/api/medical-histories/${history.id}/`, {
+        chronic_conditions: chronic_conditions
+      })
+    }
+
+    alert('تم تحديث وحفظ السجل الشخصي والفسيولوجي المكتمل للمريض بنجاح!')
+    fetchPatientDetails()
+  } catch (e) {
+    console.error('فشل حفظ التعديلات الطبية الشاملة:', e)
+    alert('تعذر حفظ التعديلات، يرجى مراجعة البيانات')
+  }
+}
+
+// مراقبة تغير معرف المريض في الرابط لإعادة جلب كافة البيانات فوراً عند التبديل بـ F5 و URL
+watch(() => route.params.id, (newId) => {
+  if (newId) {
+    patientId.value = newId
+    
+    patientName.value = 'المريض'
+    patientData.value = {}
+    patientForm.value = { full_name: '', date_of_birth: '', gender: 'M', element_type: 'patient' }
+    assignedCaregivers.value = []
+    customRules.value = []
+    
+    fetchPatientDetails()
+    fetchAssignedCaregivers()
+    fetchCustomRules()
+  }
+}, { immediate: true })
+
+onMounted(() => {
+  fetchPatientDetails()
+  fetchAssignedCaregivers()
+  fetchCustomRules()
+})
 </script>
+
+<style scoped>
+.custom-scrollbar {
+  scrollbar-width: thin;
+}
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #0d9488;
+}
+</style>
