@@ -18,7 +18,7 @@ class MLPredictor(BasePredictor):
 
     def __init__(self, model_path=None):
         if model_path is None:
-            model_path = os.path.join(
+            model_path = os.path.join( 
                 os.path.dirname(__file__), "..", "ml", "models", "random_forest.pkl"
             )
 
@@ -29,7 +29,7 @@ class MLPredictor(BasePredictor):
             data = pickle.load(f)
             self.model = data["model"]
             self.feature_names = data["feature_names"]
-            self.best_threshold = data.get("best_threshold", 0.55)
+            self.best_threshold = data.get("best_threshold", 0.25)
 
     def _extract_medical_history_features(self, element) -> dict:
         """استخراج تاريخ المريض الطبي الحقيقي من قاعدة البيانات وتجهيز ميزاته"""

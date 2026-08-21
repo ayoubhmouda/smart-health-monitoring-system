@@ -6,6 +6,11 @@ from collections import defaultdict
 from sensors.models import Sensor, SensorReading
 from sensors.services.source_router import SourceRouter
 
+# 🟢 استيراد مكتبات قنوات دجانغو للبث الفوري وإشارات دجانغو
+from django.db.models.signals import post_save
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
+
 @shared_task
 def read_all_active_sensors():
     """
@@ -38,7 +43,7 @@ def read_all_active_sensors():
         # سيضمن استخدام كاش Redis المشترك بكفاءة 100% دون تداخل من مرضى آخرين.
         for sensor in sensor_list:
             
-            # 🟢 التعديل الجديد: استخراج وقت تحديث الإعدادات كطابع زمني (Timestamp) 
+            # استخراج وقت تحديث الإعدادات كطابع زمني (Timestamp) 
             # لحل مشكلة تجمد قراءات التدهور التدريجي وتمريره للموجه (Router)
             config_start_time = None
             if sensor.data_source_config and hasattr(sensor.data_source_config, 'updated_at'):
@@ -64,4 +69,54 @@ def read_all_active_sensors():
             # نقوم بحفظ مئات القراءات في استعلام SQL واحد فقط!
             SensorReading.objects.bulk_create(readings_to_create)
             
-    return f"Readings created for {len(readings_to_create)} sensors safely and coherently."
+        # 🟢 5. حل مشكلة الباك إند: إطلاق إشارة الـ post_save يدوياً لكل قراءة تم حفظها بالـ bulk_create
+        # هذا يضمن استيقاظ محرك القواعد (Rule Engine) في تطبيق rules وتقييم القوانين المخصصة وحفظ التنبيهات فوراً
+        try:
+            for reading in readings_to_create:
+                post_save.send(
+                    sender=SensorReading,
+                    instance=reading,
+                    created=True
+                )
+        except Exception as e:
+            # حماية صامتة: لضمان عدم تأثر البث عند أي ظرف طارئ في المعالجة
+            pass
+            
+        # 🟢 6. بث تحديث فوري عبر الـ WebSocket لكافة المرضى مع تمرير القراءات الفعلية
+        try:
+            channel_layer = get_channel_layer()
+            if channel_layer:
+                # استخراج المعرفات المتميزة للمرضى الذين شملتهم القراءات الجديدة
+                updated_patient_ids = {
+                    r.sensor.monitored_element_id 
+                    for r in readings_to_create 
+                    if r.sensor and r.sensor.monitored_element_id
+                }
+                
+                for p_id in updated_patient_ids:
+                    # تجميع القراءات الخاصة بهذا المريض تحديداً لتمريرها بداخل الـ WebSocket
+                    patient_readings = [
+                        {
+                            "sensor_id": r.sensor_id,
+                            "sensor_name": r.sensor.sensor_type.name if r.sensor and r.sensor.sensor_type else "Unknown",
+                            "value": r.value,
+                            "recorded_at": r.recorded_at.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+                        }
+                        for r in readings_to_create 
+                        if r.sensor and r.sensor.monitored_element_id == p_id
+                    ]
+
+                    async_to_sync(channel_layer.group_send)(
+                        f"patient_alerts_group_{p_id}",
+                        {
+                            "type": "send_sensor_update",
+                            "readings": patient_readings, # تم إضافة القراءات الفعلية هنا!
+                            "message": "New sensor readings recorded",
+                            "timestamp": current_time.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+                        }
+                    )
+        except Exception as e:
+            # حماية صامتة: لضمان عدم تأثر حفظ البيانات عند أي طارئ في الشبكة
+            pass
+            
+    return f"Readings created for {len(readings_to_create)} sensors safely, coherently, and evaluated against clinical rules."

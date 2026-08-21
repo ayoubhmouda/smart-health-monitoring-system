@@ -17,6 +17,9 @@ router.register(r'context-histories', views.ContextHistoryViewSet)
 router.register(r'insights', views.InsightViewSet)
 router.register(r'corrective-actions', views.CorrectiveActionViewSet)
 router.register(r'notifications', views.NotificationViewSet)
+router.register(r'doctors', views.DoctorViewSet, basename='doctors')
+router.register(r'rules', views.RuleViewSet, basename='rules')
+router.register(r'caregivers', views.CaregiverViewSet, basename='caregivers')
 
 urlpatterns = [
     path('', include(router.urls)),
