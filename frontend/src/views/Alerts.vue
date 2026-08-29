@@ -1,28 +1,32 @@
 <!-- src/views/Alerts.vue -->
 <template>
-  <div class="flex-1 flex flex-col h-screen max-h-screen bg-[#F0F6F5]" dir="rtl">
+  <div class="flex-1 flex flex-col h-screen max-h-screen bg-[#F0F6F5] p-6 gap-6 overflow-hidden" dir="rtl">
     
-    <!-- الترويسة العلوية لمركز الإشعارات -->
-    <div class="px-6 pt-6 pb-4 flex-shrink-0 select-none flex items-center justify-between border-b border-slate-200/50 bg-white shadow-xs">
-      <div>
-        <h1 class="text-lg font-black text-slate-800 tracking-tight flex items-center gap-2">
-          <svg class="w-5 h-5 text-rose-500 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <!-- الهيدر العلوي المطور بالبطاقة التركوازية الغامقة الموحدة لهوية نظام MediWatch -->
+    <header class="w-full rounded-3xl border border-white/10 p-6 shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-gradient-to-b from-[#0a3d48] via-[#0e4f5e] to-[#08323c] text-white select-none shrink-0">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 shrink-0 rounded-xl bg-teal-500/20 border border-teal-400/20 flex items-center justify-center text-teal-300">
+          <svg class="w-5 h-5 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
           </svg>
-          <span>مركز الإشعارات والتنبيهات الطبية (Caregiver Alert Hub)</span>
-        </h1>
-        <p class="text-xs text-slate-400 mt-0.5 font-medium">متابعة ومراجعة فروع الإنذارات الطارئة المستنبطة من شبكة الأمان، البروتوكولات، وقواعد المرضى المخصصة.</p>
+        </div>
+        <div>
+          <h1 class="text-xl font-extrabold text-white tracking-tight">
+            مركز الإشعارات والتنبيهات الطبية (Caregiver Alert Hub)
+          </h1>
+          <p class="text-[11px] text-teal-200/70 mt-1 font-medium">متابعة ومراجعة فروع الإنذارات الطارئة المستنبطة من شبكة الأمان، البروتوكولات، وقواعد المرضى المخصصة.</p>
+        </div>
       </div>
 
-      <!-- مؤشر العداد المباشر الإجمالي العام في السوكيت -->
-      <div v-if="alertsStore.activeAlertsCount > 0" class="flex items-center gap-2 bg-rose-50 border border-rose-200 rounded-xl py-1.5 px-3">
-        <span class="w-2 h-2 rounded-full bg-rose-600 animate-ping"></span>
-        <span class="text-xs font-black text-rose-800">يوجد {{ alertsStore.activeAlertsCount }} إنذار سريري نشط حالياً</span>
+      <!-- مؤشر العداد المباشر الإجمالي العام في السوكيت بالهوية المتدرجة -->
+      <div v-if="alertsStore.activeAlertsCount > 0" class="flex items-center gap-2 bg-rose-500/20 border border-rose-500/30 rounded-xl py-1.5 px-3">
+        <span class="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
+        <span class="text-xs font-black text-rose-200">يوجد {{ alertsStore.activeAlertsCount }} إنذار سريري نشط حالياً</span>
       </div>
-    </div>
+    </header>
 
     <!-- شريط فلاتر التصفية المنسدلة الثلاثية الموحدة (Dropdowns Filter Bar) -->
-    <div class="px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4 flex-shrink-0 border-b border-slate-200/40 bg-white shadow-xs select-none">
+    <div class="px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4 flex-shrink-0 border border-slate-200/50 rounded-2xl bg-white shadow-xs select-none">
       
       <div class="text-xs font-bold text-slate-700">
         تصفية الإنذارات السريرية النشطة والتاريخية:
@@ -40,9 +44,9 @@
             class="bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold rounded-xl py-2 px-3 focus:outline-none focus:ring-1 focus:ring-[#0d9488] cursor-pointer"
           >
             <option value="all">كل أنواع التنبيهات</option>
-            <option value="threshold">شبكة الأمان (النظام)</option>
-            <option value="global">البروتوكولات السريرية (المدير)</option>
-            <option value="patient_rule">قواعد الطبيب الخاصة</option>
+            <option value="threshold">عتبات النظام</option>
+            <option value="global">البروتوكولات العامة</option>
+            <option value="patient_rule">القواعد الخاصة</option>
           </select>
         </div>
 
@@ -79,7 +83,7 @@
     </div>
 
     <!-- شريط معلومات إحصائي يوضح إجمالي التنبيهات المصفاة في القسم المفتوح -->
-    <div class="px-6 py-3 flex-shrink-0 flex items-center justify-between text-[11px] font-black text-slate-400 select-none uppercase tracking-wider">
+    <div class="px-6 flex-shrink-0 flex items-center justify-between text-[11px] font-black text-slate-400 select-none uppercase tracking-wider">
       <div class="flex items-center gap-1.5">
         <span class="w-1.5 h-1.5 rounded-full bg-slate-300"></span>
         <span>إجمالي التنبيهات المعروضة في هذا القسم: ({{ filteredAlerts.length }}) تنبيه تاريخي</span>
@@ -91,7 +95,7 @@
     </div>
 
     <!-- جسد عرض قائمة التنبيهات مع شريط تصفح رأسي مخصص -->
-    <main class="flex-1 px-6 pb-6 overflow-y-auto w-full custom-scrollbar pr-1">
+    <main class="flex-1 overflow-y-auto w-full custom-scrollbar pr-1 pb-4">
       
       <!-- مؤشر جاري التحميل -->
       <div v-if="loading && alertsHistory.length === 0" class="py-20 text-center flex flex-col items-center justify-center gap-3">
@@ -107,68 +111,81 @@
             :key="alert.id"
             :class="[
               isCritical(alert) 
-                ? 'border-r-rose-600 bg-rose-50/20 hover:border-rose-300 shadow-rose-100/30' 
-                : 'border-r-amber-500 bg-amber-50/20 hover:border-amber-300 shadow-amber-100/30'
+                ? 'border-r-rose-600 hover:border-rose-300' 
+                : 'border-r-amber-500 hover:border-amber-300',
+              // 🟢 تمييز التنبيه النشط حالياً بتوهج نبضي أحمر واضح ومنسجم لشد عين الطبيب
+              isCurrentlyActive(alert) 
+                ? 'ring-2 ring-rose-500 bg-rose-50/40 shadow-lg shadow-rose-500/10 animate-[pulse_3s_infinite]' 
+                : 'bg-white shadow-xs'
             ]"
-            class="bg-white border border-slate-200/90 border-r-4 rounded-2xl p-5 shadow-sm transition-all duration-200 flex flex-col justify-between gap-4"
+            class="border border-slate-200/90 border-r-4 rounded-3xl p-5 transition-all duration-300 flex flex-col justify-between gap-4 relative"
           >
-            <!-- الهيدر الداخلي للكارت: المصدر وتاريخ التنبيه -->
+            <!-- الهيدر الداخلي للكارت: المصدر وتاريخ التنبيه الموضح للعين -->
             <div class="flex items-center justify-between">
-              <span :class="getSourceBadgeClass(alert)" class="text-[9px] font-black px-2 py-0.5 rounded-full border">
+              <span :class="getSourceBadgeClass(alert)" class="text-[9px] font-black px-2.5 py-0.5 rounded-full border uppercase tracking-wider">
                 {{ getSourceLabel(alert) }}
               </span>
-              <span class="text-[10px] text-slate-400 font-mono font-semibold">
+              <!-- عرض الوقت والتاريخ بشكل منسق وواضح جداً ومريح للعين -->
+              <span class="text-[10px] text-slate-500 font-mono font-bold tracking-tight">
                 {{ formatDateTime(alert.detected_at) }}
               </span>
             </div>
 
             <!-- تفاصيل ديموغرافية المريض المتأثر بالحدث -->
-            <div class="bg-slate-50 border border-slate-100 rounded-xl p-3 flex flex-col gap-1 text-[11px] text-slate-500 font-bold select-none">
-              <div class="flex justify-between">
+            <div class="bg-slate-50 border border-slate-100 rounded-xl p-3.5 flex flex-col gap-1.5 text-[11px] text-slate-500 font-bold select-none">
+              <div class="flex justify-between border-b border-slate-200/50 pb-1.5">
                 <span>المريض: <strong class="text-slate-800 text-xs font-black">{{ alert.patient_name || 'غير معروف' }}</strong></span>
-                <span>ID: <strong>#{{ alert.monitored_element_id || alert.monitored_element }}</strong></span>
+                <span>ID: <strong class="font-bold">#{{ alert.monitored_element_id || alert.monitored_element }}</strong></span>
               </div>
               <div class="flex justify-between pt-0.5">
-                <span>العمر: <strong>{{ alert.patient_age || 'غير حدد' }} سنة</strong></span>
-                <span>الجنس: <strong>{{ alert.patient_gender === 'M' || alert.patient_gender === 'ذكر' ? 'ذكر' : 'أنثى' }}</strong></span>
+                <span>العمر: <strong class="font-bold text-slate-700">{{ alert.patient_age || 'غير محدد' }} سنة</strong></span>
+                <span>الجنس: <strong class="font-bold text-slate-700">{{ alert.patient_gender === 'M' || alert.patient_gender === 'ذكر' ? 'ذكر' : 'أنثى' }}</strong></span>
               </div>
             </div>
 
-            <!-- رسالة التحذير السريرية -->
+            <!-- رسالة التحذير السريرية واسم القاعدة المعنية ودرجة الخطورة الصريحة المفصلة -->
             <div class="flex flex-col gap-1">
-              <h4 class="text-slate-800 font-black text-sm flex items-center gap-1.5">
-                <span class="w-1.5 h-1.5 rounded-full bg-rose-500" v-if="isCritical(alert)"></span>
-                {{ alert.insight_type_display || 'مؤشر فسيولوجي غير طبيعي' }}
-              </h4>
-              <p class="text-slate-500 text-xs leading-relaxed font-bold">
+              <div class="flex items-center justify-between">
+                <h4 class="text-slate-800 font-black text-xs flex items-center gap-1.5">
+                  <span class="w-1.5 h-1.5 rounded-full bg-rose-500" v-if="isCritical(alert)"></span>
+                  {{ alert.rule_name ? `${alert.rule_name}` : 'تنبيه تجاوز الحدود الطبية' }}
+                </h4>
+                <!-- 🟢 فصل الشارات لإظهار خطورة عالية و حرج حقيقي متناسق مع الإدخال -->
+                <span class="text-[9px] font-black uppercase" :class="getSeverityTextClass(alert.severity)">
+                  {{ getSeverityLabel(alert.severity) }}
+                </span>
+              </div>
+              <p class="text-slate-500 text-xs leading-relaxed font-bold mt-1">
                 {{ alert.message || 'تم رصد تجاوز للحدود الآمنة لعلامات المريض الفسيولوجية.' }}
               </p>
             </div>
 
-            <!-- الإجراء العلاجي المقترح من الباك إند (Action Template) -->
-            <div v-if="alert.action_template" class="bg-teal-50 border border-teal-100 rounded-xl p-3 text-xs text-teal-800 font-bold flex items-start gap-2">
-              <span class="text-base">📋</span>
+            <!-- الإجراء العلاجي المقترح من الباك إند -->
+            <div v-if="alert.action_template" class="bg-teal-50/60 border border-teal-100/80 rounded-2xl p-3.5 text-xs text-teal-800 font-bold flex items-start gap-2.5">
+              <svg class="w-4 h-4 text-teal-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
               <div>
-                <div class="text-[10px] text-teal-600 font-black uppercase tracking-wider mb-0.5">الإجراء السريري المقترح</div>
+                <div class="text-[9px] text-teal-600 font-black uppercase tracking-wider mb-0.5">الإجراء السريري المقترح</div>
                 {{ alert.action_template }}
               </div>
             </div>
 
-            <!-- الإجراءات الطبية المتاحة للمعاينة والتصفية -->
+            <!-- أزرار التحكم الطبية الحرفية الموحدة بالهوية البصرية -->
             <div class="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100">
               <button 
                 @click="viewPatientDashboard(alert)"
-                class="flex items-center justify-center gap-1 bg-[#0a2540] hover:bg-[#113254] text-white text-xs font-black py-2 rounded-xl transition-all shadow-sm shadow-slate-900/10 cursor-pointer active:scale-95"
+                class="flex items-center justify-center gap-1.5 bg-[#0a2540] hover:bg-[#113254] text-white text-[11px] font-black py-2.5 rounded-2xl transition-all shadow-sm shadow-slate-900/10 cursor-pointer active:scale-95"
               >
-                <span>معاينة المريض</span>
-                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <span>معاينة الحالة</span>
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
                 </svg>
               </button>
               
               <button 
                 @click="resolveAlertLocally(alert.id)"
-                class="flex items-center justify-center gap-1 bg-white hover:bg-slate-50 text-slate-600 border border-slate-200 hover:border-slate-300 text-xs font-bold py-2 rounded-xl transition-all cursor-pointer active:scale-95"
+                class="flex items-center justify-center gap-1.5 bg-white hover:bg-slate-50 text-slate-600 border border-slate-200 hover:border-slate-300 text-[11px] font-bold py-2.5 rounded-2xl transition-all cursor-pointer active:scale-95"
               >
                 <span>تم الحل والمعاينة</span>
               </button>
@@ -176,7 +193,7 @@
           </div>
         </div>
 
-        <!-- زر تحميل المزيد من التنبيهات التاريخية (50 تنبيهاً أخرى) -->
+        <!-- زر تحميل المزيد من التنبيهات التاريخية -->
         <div v-if="hasMore" class="flex justify-center mt-8 select-none">
           <button 
             @click="loadMore"
@@ -212,17 +229,27 @@ const alertsStore = useAlertsStore()
 const patientStore = usePatientStore()
 
 const loading = ref(false)
-const selectedTab = ref('all')         // 'all' | 'threshold' | 'global' | 'patient_rule'
-const selectedPatientId = ref('all')   // 'all' | patient_id
-const selectedSeverity = ref('all')    // 'all' | 'CRITICAL' | 'HIGH' | 'MEDIUM'
+const selectedTab = ref('all')         
+const selectedPatientId = ref('all')   
+const selectedSeverity = ref('all')    
 
 const alertsHistory = ref([])
 const limit = ref(50)
 const offset = ref(0)
 const hasMore = ref(true)
 
-// 🟢 جلب البيانات المفلترة من قاعدة البيانات عبر الـ REST API المطور
-// 🟢 جلب البيانات المفلترة من قاعدة البيانات عبر الـ REST API المطور مع تتبع دقيق للأخطاء
+const tabs = [
+  { label: 'الكل', value: 'all' },
+  { label: 'عتبات النظام', value: 'threshold' },
+  { label: 'البروتوكولات العامة', value: 'global' },
+  { label: 'القواعد الخاصة', value: 'patient_rule' }
+]
+
+const isCurrentlyActive = (alert) => {
+  const patientId = alert.monitored_element_id || alert.monitored_element
+  return alertsStore.patientAlertStates[patientId] != null
+}
+
 const fetchAlertsHistory = async (append = false) => {
   if (!append) {
     loading.value = true
@@ -237,42 +264,34 @@ const fetchAlertsHistory = async (append = false) => {
       offset: offset.value
     }
 
-    // 1. فلترة المريض
     if (selectedPatientId.value !== 'all') {
       params.monitored_element = selectedPatientId.value
     }
 
-    // 2. فلترة مستوى الخطورة
     if (selectedSeverity.value !== 'all') {
       params.severity = selectedSeverity.value
     }
 
-    // 3. فلترة نوع ومصدر الإنذار
     if (selectedTab.value !== 'all') {
       params.alert_type = selectedTab.value
     }
 
-    // طباعة البارامترات المرسلة للتفتيش
     console.log("📤 [Alerts.vue] إرسال بارامترات الفلترة للسيرفر:", params)
 
     const res = await api.get('/api/insights/', { params })
     
-    // 🟢 طباعة الرد الفعلي الراجع من قاعدة البيانات لتفتيش المحتوى
     console.log("📥 [Alerts.vue] الرد الراجع من السيرفر بنجاح:", res.data)
 
     const data = Array.isArray(res.data) ? res.data : (res.data.results || [])
     
-    // التحقق من وجود المزيد من التنبيهات
     const nextUrl = res.data?.next || null
     hasMore.value = nextUrl !== null
     
-    // استبعاد تنبؤات الذكاء الاصطناعي (ML) من شاشة التنبيهات الطبية
     const filteredData = data.filter(item => 
       item.source?.toLowerCase() !== 'ml' && 
       item.source?.toLowerCase() !== 'ml_model'
     )
 
-    // دمج البيانات الفوقية للمريض (Demographics)
     const mapped = filteredData.map(item => {
       const patientId = item.monitored_element_id || item.monitored_element
       const patient = patientStore.patients?.find(p => Number(p.id) === Number(patientId))
@@ -297,24 +316,39 @@ const fetchAlertsHistory = async (append = false) => {
   }
 }
 
-// استنباط نص توضيحي في حالة عدم وجود تفاصيل من الباك إند
+// 🟢 تصفية نصوص فسيولوجية قصيرة جداً ومباشرة
 const getAlertMessageFallback = (item) => {
   const source = item.source?.toLowerCase()
   if (source === 'threshold') {
-    return 'تم رصد تجاوز للحدود الحيوية السريرية الصارمة للمريض، يرجى التوجه الفوري للمعاينة السريرية.'
+    return 'تجاوز للحدود الفسيولوجية الآمنة للمريض.'
   }
-  return 'تجاوز لأحد قواعد الرعاية الطبية أو البروتوكولات العلاجية الموضوعة للمريض.'
+  return item.is_global_rule ? 'تجاوز للبروتوكول السريري العام للمستشفى.' : 'تجاوز للقاعدة السريرية المخصصة للمريض.'
 }
 
 const isCritical = (alert) => {
   return ['CRITICAL', 'HIGH'].includes(String(alert.severity).toUpperCase())
 }
 
+// 🟢 دالة ترجمة وتوحيد مسميات الخطورة بدقة فسيولوجية وفصلها
+const getSeverityLabel = (severity) => {
+  const s = String(severity).toUpperCase()
+  if (s === 'CRITICAL') return 'حالة حرجة'
+  if (s === 'HIGH' || s === 'WARNING') return 'خطورة عالية'
+  return 'خطورة متوسطة'
+}
+
+const getSeverityTextClass = (severity) => {
+  const s = String(severity).toUpperCase()
+  if (s === 'CRITICAL') return 'text-rose-600'
+  if (s === 'HIGH' || s === 'WARNING') return 'text-orange-600'
+  return 'text-amber-600'
+}
+
 const getSourceLabel = (alert) => {
   const src = alert.source?.toLowerCase()
-  if (src === 'threshold') return 'تنبيه عتبة (النظام)'
-  if (alert.is_global_rule) return 'بروتوكول عام (المدير)'
-  return 'قاعدة طبيب (خاصة)'
+  if (src === 'threshold') return 'عتبات النظام'
+  if (alert.is_global_rule) return 'البروتوكولات العامة'
+  return 'القواعد الخاصة'
 }
 
 const getSourceBadgeClass = (alert) => {
@@ -324,17 +358,14 @@ const getSourceBadgeClass = (alert) => {
   return 'bg-amber-50 text-amber-800 border-amber-200'
 }
 
-// التصفية والترتيب تم تطبيقها كلياً على مستوى قاعدة البيانات الآن لسرعة استجابة هائلة للـ DOM
 const filteredAlerts = computed(() => {
   return alertsHistory.value
 })
 
-// تصفية الفلاتر المنسدلة الثلاثة وإعادة تحميل التنبيهات من الصفر
 const onFilterChange = () => {
   fetchAlertsHistory(false)
 }
 
-// 🟢 جلب 50 تنبيهاً إضافياً وزيادة الـ Offset
 const loadMore = () => {
   offset.value += limit.value
   fetchAlertsHistory(true)
@@ -345,7 +376,8 @@ const formatDateTime = (ts) => {
   const date = new Date(ts)
   return isNaN(date.getTime()) 
     ? '' 
-    : date.toLocaleTimeString('ar-LY', { hour: '2-digit', minute: '2-digit', second: '2-digit', day: '2-digit', month: '2-digit' })
+    : date.toLocaleDateString('ar-LY', { day: '2-digit', month: '2-digit', year: 'numeric' }) + ' ' + 
+      date.toLocaleTimeString('ar-LY', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
 }
 
 const viewPatientDashboard = (alert) => {
@@ -357,8 +389,16 @@ const viewPatientDashboard = (alert) => {
   }
 }
 
-const resolveAlertLocally = (alertId) => {
-  alertsHistory.value = alertsHistory.value.filter(a => a.id !== alertId)
+const resolveAlertLocally = async (alertId) => {
+  if (confirm('هل أنت متأكد من حل ومعاينة هذا التنبيه وحذفه نهائياً من سجلات المريض فسيولوجياً؟')) {
+    try {
+      await api.delete(`/api/insights/${alertId}/`) 
+      alertsHistory.value = alertsHistory.value.filter(a => a.id !== alertId) 
+    } catch (e) {
+      console.error('🚨 [Alerts.vue] فشل حذف وتصفية التنبيه السريري نهائياً من السيرفر:', e)
+      alert('فشل حل التنبيه برمجياً، يرجى فحص الاتصال بقاعدة البيانات')
+    }
+  }
 }
 
 onMounted(() => {
@@ -367,6 +407,9 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.custom-scrollbar {
+  scrollbar-width: thin;
+}
 .custom-scrollbar::-webkit-scrollbar {
   width: 6px;
 }

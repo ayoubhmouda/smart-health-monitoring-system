@@ -11,7 +11,7 @@ from notifications.models import InterestRegistration
 
 # --- Core ---
 class MonitoredElementSerializer(serializers.ModelSerializer):
-    age = serializers.ReadOnlyField()  # لعرض العمر المحسوب
+    age = serializers.ReadOnlyField()  
     class Meta:
         model = MonitoredElement
         fields = '__all__'
@@ -50,28 +50,26 @@ class DataSourceConfigSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-# 🟢 دمج وتوحيد كلاس قراءة الحساس ليعرض الحساس المدمج وحالة التلوين (status) معاً دون تضارب
 class SensorReadingSerializer(serializers.ModelSerializer):
     sensor = SensorSerializer(read_only=True)
     sensor_name = serializers.CharField(source='sensor.sensor_type.name', read_only=True)
-    status = serializers.SerializerMethodField()  # حقل تحديد حالة اللون الموجه للفرونت إند
+    status = serializers.SerializerMethodField()  
+    min_val = serializers.FloatField(source='sensor.sensor_type.normal_min', read_only=True)
+    max_val = serializers.FloatField(source='sensor.sensor_type.normal_max', read_only=True)
 
     class Meta:
         model = SensorReading
-        fields = ['id', 'sensor', 'sensor_name', 'value', 'status', 'recorded_at']
+        fields = ['id', 'sensor', 'sensor_name', 'value', 'status', 'recorded_at', 'min_val','max_val']
 
     def get_status(self, obj):
-        # قراءة العتبات الطبية الحقيقية للحساس مباشرة من قاعدة البيانات
         val = obj.value
         sensor_type = obj.sensor.sensor_type if (obj.sensor and obj.sensor.sensor_type) else None
         if val is None or not sensor_type:
             return 'Good'
 
-        # جلب الحدود المسجلة في جدول SensorType
         min_val = sensor_type.normal_min
         max_val = sensor_type.normal_max
 
-        # إذا تداخلت القراءة وخرجت عن الحدود، نوجه الفرونت إند لتلوينها بالأصفر (Caution)
         if (min_val is not None and val < min_val) or (max_val is not None and val > max_val):
             return 'Caution'
         return 'Good'
@@ -93,9 +91,33 @@ class ContextHistorySerializer(serializers.ModelSerializer):
 
 # --- Reasoning ---
 class InsightSerializer(serializers.ModelSerializer):
+    # 🟢 حقن البيانات الفوقية للقاعدة المرتبطة بالتنبؤ تلقائياً في السيرفر لضمان دقة الهوية بالفرونت إند
+    is_global_rule = serializers.SerializerMethodField()
+    rule_name = serializers.SerializerMethodField()
+    action_template = serializers.SerializerMethodField()
+
     class Meta:
         model = Insight
         fields = '__all__'
+
+    def get_is_global_rule(self, obj):
+        # التحقق من ارتباط الاستبصار بإجراء تصحيحي نشط لقانون عام للمستشفى (monitored_element is null)
+        action = obj.corrective_actions.filter(rule__is_active=True).order_by('-id').first()
+        if action and action.rule:
+            return action.rule.monitored_element is None
+        return False
+
+    def get_rule_name(self, obj):
+        action = obj.corrective_actions.filter(rule__is_active=True).order_by('-id').first()
+        if action and action.rule:
+            return action.rule.name
+        return None
+
+    def get_action_template(self, obj):
+        action = obj.corrective_actions.filter(rule__is_active=True).order_by('-id').first()
+        if action and action.rule:
+            return action.rule.action_template
+        return None
 
 
 # --- Rules ---
@@ -104,7 +126,11 @@ class RuleSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Rule
-        fields = ['id', 'name', 'condition', 'action_template', 'severity', 'severity_display', 'is_active', 'monitored_element']
+        # 🟢 إضافة حقل overridden_rules لتمكين الواجهة من قراءة وحفظ التجاوز الصريح
+        fields = [
+            'id', 'name', 'condition', 'action_template', 'severity', 
+            'severity_display', 'is_active', 'monitored_element', 'overridden_rules'
+        ]
 
 
 class CorrectiveActionSerializer(serializers.ModelSerializer):
@@ -134,5 +160,4 @@ class DoctorSerializer(serializers.ModelSerializer):
         return name if name else obj.username
 
     def get_assigned_patients_count(self, obj):
-        # حساب عدد المرضى المتابعين لهذا الطبيب عبر سجلات الاهتمام والمتابعة
         return InterestRegistration.objects.filter(interested_party=obj).values('monitored_element').distinct().count()

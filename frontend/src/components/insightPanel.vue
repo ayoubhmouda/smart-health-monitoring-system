@@ -1,76 +1,86 @@
-<!-- insightPanel.vue -->
+<!-- frontend/src/components/insightPanel.vue -->
 <template>
-  <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm shadow-slate-100/50">
-    <h3 class="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2">
-      <!-- أيقونة الاستدلال الذكي التوضيحية -->
-      <svg class="w-4 h-4 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-      </svg>
-      <span>أحدث تنبؤ</span>
-    </h3>
+  <!-- الكارت الأب المطور بإنحناءات دائرية فاخرة ومحكمة ومقاومة للتمدد العشوائي -->
+  <div class="bg-white rounded-[2rem] border border-slate-200 shadow-sm flex flex-col overflow-hidden">
     
-    <!-- واجهة نظيفة وهادئة في حال غياب التنبؤات السريرية حالياً -->
-    <div v-if="!insight" class="flex flex-col items-center justify-center py-10 bg-slate-50/50 rounded-xl border border-dashed border-slate-100">
-      <svg class="w-8 h-8 text-slate-300 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-      <p class="text-slate-400 text-xs font-semibold">لا توجد تنبؤات حالية</p>
+    <!-- 🟢 ترويسة كارت الذكاء الاصطناعي باللون التركوازي الغامق والأيقونة البيضاء الصريحة على اليسار المقابل للعنوان -->
+    <div class="bg-[#0a3d48] text-white p-5 rounded-t-[2rem] flex items-center justify-between gap-3 select-none">
+      <div class="min-w-0">
+        <h3 class="text-sm font-extrabold text-white leading-tight">
+          أحدث تنبؤ للعلامات
+        </h3>
+        <p class="text-[10px] text-teal-200/60 mt-0.5 font-medium">
+          استبصارات الذكاء الاصطناعي 
+        </p>
+      </div>
+      <!-- الأيقونة بيضاء ناصعة وبدون حدود في الجهة المقابلة للعنوان -->
+      <Icon icon="solar:bolt-bold" class="w-6 h-6 text-white shrink-0 animate-pulse" />
     </div>
 
-    <!-- كارت تفاصيل التنبؤ الذكي بألوان الباستيل الناعمة والراقية (Soft Pastel Card) -->
-    <div v-else :class="panelBgClass" class="p-4 rounded-xl transition-all duration-300">
-      <div class="flex items-center justify-between mb-3.5">
-        <!-- طابع الوقت الأنيق والواضح للتحقق السريري -->
-        <div class="flex items-center gap-1.5 text-[10px] text-slate-500 font-semibold font-mono uppercase tracking-wide">
-          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <span>آخر تحديث: {{ formatTime(insight.detected_at) }}</span>
-        </div>
-        
-        <!-- ملصق الخطورة الذكي عالي التباين والأناقة (Clinical Severity Badge) -->
-        <span :class="severityBadgeClass" class="text-[10px] px-2.5 py-1 rounded-full font-bold border transition-colors duration-300">
-          {{ severityLabel }}
-        </span>
-      </div>
+    <!-- جسد الكارت المصفى بمسافاته المحددة مسبقاً وتفاصيله الحية -->
+    <div class="p-5 flex flex-col gap-4">
       
-      <!-- نوع التنبؤ الذكي الصادر برمجياً -->
-      <div class="text-slate-800 font-black text-lg mb-1 tracking-tight">
-        {{ insight.insight_type === 'predicted_risk' ? 'خطر متوقع' : 'شذوذ حالي' }}
-      </div>
-      
-      <!-- نص الوصف الطبي والسريري بخط فاحم واضح ومقروء للمتابعة -->
-      <div class="text-slate-600 text-xs font-medium leading-relaxed mb-3">
-        {{ insightDescription }}
+      <!-- واجهة نظيفة وهادئة في حال غياب التنبؤات السريرية حالياً مع استخدام إيكونيفاي فقط -->
+      <div v-if="!insight" class="flex flex-col items-center justify-center py-12 bg-slate-50 border border-slate-100 rounded-2xl select-none">
+        <Icon icon="solar:shield-check-bold" class="w-10 h-10 text-slate-300 mb-2 shrink-0" />
+        <p class="text-slate-400 text-xs font-black">لا توجد تنبؤات حالية</p>
       </div>
 
-      <!-- شريط الثقة العصري البسيط (Minimalist Progress Bar) -->
-      <div class="space-y-2 mt-4 pt-3 border-t border-slate-100">
-        <div class="flex justify-between items-center text-[11px] font-bold text-slate-500">
-          <span>نسبة الثقة في التنبؤ</span>
-          <span class="font-extrabold text-slate-800">{{ (insight.confidence * 100).toFixed(1) }}%</span>
+      <!-- كارت تفاصيل التنبؤ الذكي بألوان الباستيل الناعمة والراقية -->
+      <div v-else :class="panelBgClass" class="p-4 rounded-2xl transition-all duration-300">
+        <div class="flex items-center justify-between mb-3.5 select-none">
+          <!-- طابع الوقت الأنيق الموحد بأيقونة إيكونيفاي فقط -->
+          <div class="flex items-center gap-1.5 text-[10px] text-slate-500 font-bold font-mono uppercase tracking-wide">
+            <Icon icon="solar:clock-circle-bold" class="w-3.5 h-3.5 text-slate-400" />
+            <span>آخر تحديث فسيولوجي: {{ formatTime(insight.detected_at) }}</span>
+          </div>
+          
+          <!-- ملصق الخطورة السريري الموحد لدرجة خطورة التنبؤ -->
+          <span :class="severityBadgeClass" class="text-[9px] px-2.5 py-0.5 rounded-full font-black border uppercase tracking-wider transition-colors duration-300">
+            {{ severityLabel }}
+          </span>
         </div>
-        <!-- مجرى شريط التحميل باللون الرمادي الجليدي النقي -->
-        <div class="w-full bg-slate-100 rounded-full h-2">
-          <div
-            :class="confidenceBarColor"
-            class="h-2 rounded-full transition-all duration-500 shadow-sm"
-            :style="{ width: (insight.confidence * 100) + '%' }"
-          ></div>
+        
+        <!-- نوع التنبؤ الذكي الصادر برمجياً -->
+        <div class="text-slate-800 font-black text-lg mb-1 tracking-tight select-none">
+          {{ insight.insight_type === 'predicted_risk' ? 'خطر متوقع' : 'شذوذ حالي المظهر' }}
+        </div>
+        
+        <!-- نص الوصف الطبي والسريري بخط واضح ومقروء للمتابعة -->
+        <div class="text-slate-600 text-xs font-bold leading-relaxed mb-3">
+          {{ insightDescription }}
+        </div>
+
+        <!-- شريط الثقة العصري البسيط (Minimalist Progress Bar) -->
+        <div class="space-y-2 mt-4 pt-3 border-t border-slate-100/85">
+          <div class="flex justify-between items-center text-[10px] font-black text-slate-500 select-none">
+            <span>نسبة الثقة في التنبؤ المالي</span>
+            <span class="font-black text-slate-800 font-mono">{{ (insight.confidence * 100).toFixed(1) }}%</span>
+          </div>
+          <!-- مجرى شريط التحميل باللون الرمادي الجليدي النقي -->
+          <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+            <div
+              :class="confidenceBarColor"
+              class="h-2 rounded-full transition-all duration-500 shadow-sm"
+              :style="{ width: (insight.confidence * 100) + '%' }"
+            ></div>
+          </div>
         </div>
       </div>
+
     </div>
   </div>
 </template>
 
 <script setup>
 import { computed } from 'vue'
+import { Icon } from '@iconify/vue' // استيراد الأيقونات الموحدة إجبارياً لمنع تداخل الـ SVGs
 
 const props = defineProps({
   insight: { type: Object, default: null }
 })
 
-// تنسيق الوقت بطريقة طبية نظيفة ومبسطة بالدقة المطلوبة
+// تنسيق الوقت بطريقة طبية نظيفة ومبسطة
 const formatTime = (dateStr) => {
   if (!dateStr) return ''
   return new Date(dateStr).toLocaleTimeString('ar', { hour: '2-digit', minute: '2-digit' })
@@ -85,7 +95,7 @@ const insightDescription = computed(() => {
   return 'العلامات الحيوية للمريض تقع بالكامل ضمن الحدود الآمنة والمستقرة.'
 })
 
-// تنسيق خلفيات الكروت الداخلية بألوان الباستيل الناعمة والراقية (Soft Pastel Palette)
+// تنسيق خلفيات الكروت الداخلية بألوان الباستيل الناعمة والراقية
 const panelBgClass = computed(() => {
   const s = props.insight?.severity
   if (s === 'high' || s === 'critical') return 'bg-rose-50/60 border border-rose-100'
@@ -102,7 +112,7 @@ const severityLabel = computed(() => {
   return 'مستقر'
 })
 
-// ملصقات الخطورة الدائرية الأنيقة (High-Contrast Badges)
+// ملصقات الخطورة الدائرية الأنيقة
 const severityBadgeClass = computed(() => {
   const s = props.insight?.severity
   if (s === 'high' || s === 'critical') return 'bg-rose-100/60 text-rose-700 border-rose-200'

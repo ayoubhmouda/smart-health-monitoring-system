@@ -1,4 +1,4 @@
-<!-- MetricCard.vue -->
+<!-- frontend/src/components/MetricCard.vue -->
 <template>
   <div :class="[
     'p-3.5 sm:p-4 rounded-2xl flex flex-col justify-between h-[155px] sm:h-[160px] transition-all duration-300 shadow-sm hover:shadow-md w-full bg-white',
@@ -25,7 +25,7 @@
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
         </svg>
 
-        <!-- Respiratory / Wind / Cloud Icon (دعم جميع المسميات) -->
+        <!-- Respiratory / Wind / Cloud Icon -->
         <svg v-else-if="isRespIcon" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.59 4.59A2 2 0 1111 8H2m10.59 11.41A2 2 0 1014 16H2m15.73-8.27A2.5 2.5 0 1119.5 12H2" />
         </svg>
@@ -106,9 +106,18 @@
       </template>
     </div>
 
-    <!-- شريط مدى الحساس السفلي -->
-    <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-      <div :class="['h-full rounded-full transition-all duration-500', barColorClass]" :style="{ width: barWidth }"></div>
+    <div class="space-y-1">
+      <!-- شريط مدى الحساس السفلي -->
+      <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+        <div :class="['h-full rounded-full transition-all duration-500', barColorClass]" :style="{ width: barWidth }"></div>
+      </div>
+
+      <!-- 🟢 شريط القيم المرجعية والحدود القصوى والدنيا الموقعة أسفل شريط التحميل مباشرة (مطابق للقطة 100%) -->
+      <div v-if="props.minVal !== null || props.maxVal !== null" class="text-[10px] text-slate-400 font-bold select-none flex justify-between items-center px-1 font-mono leading-none">
+        <span>{{ absoluteMin ?? '--' }}</span>
+        <span class="text-slate-500 font-extrabold">{{ props.minVal }}-{{ props.maxVal }}</span>
+        <span>{{ absoluteMax ?? '--' }}</span>
+      </div>
     </div>
   </div>
 </template>
@@ -121,10 +130,31 @@ const props = defineProps({
   value: [String, Number],
   status: String,
   icon: String,
-  unit: String
+  unit: String,
+  minVal: { type: [String, Number], default: null }, 
+  maxVal: { type: [String, Number], default: null }  
 })
 
-// التعرّف على أيقونة التنفس مهما كان اسمها من الـ Backend
+// 🟢 حساب القيمة الدنيا الفسيولوجية المطلقة للحساس لتثبيتها يميناً (تطابق اللقطة)
+const absoluteMin = computed(() => {
+  if (props.icon === 'heart') return '30'
+  if (props.icon === 'o2') return '70'
+  if (props.icon === 'bp') return '60/40'
+  if (isRespIcon.value) return '5'
+  if (props.icon === 'fire' || props.icon === 'temp') return '32'
+  return null
+})
+
+// 🟢 حساب القيمة القصوى الفسيولوجية المطلقة للحساس لتثبيتها يساراً (تطابق اللقطة)
+const absoluteMax = computed(() => {
+  if (props.icon === 'heart') return '200'
+  if (props.icon === 'o2') return '100'
+  if (props.icon === 'bp') return '190/110'
+  if (isRespIcon.value) return '50'
+  if (props.icon === 'fire' || props.icon === 'temp') return '42'
+  return null
+})
+
 const isRespIcon = computed(() => {
   return ['cloud', 'resp', 'respiratory', 'wind', 'lungs'].includes(props.icon)
 })
@@ -133,12 +163,11 @@ const isSpecialCard = computed(() => {
   return ['bolt', 'activity', 'home'].includes(props.icon)
 })
 
-// إظهار الوحدة المحددة أو الاستنباط التلقائي بحسب الحساس
 const displayUnit = computed(() => {
   if (props.unit) return props.unit
   const valStr = String(props.value)
   if (valStr.includes('mmHg') || valStr.includes('bpm') || valStr.includes('°C') || valStr.includes('%')) {
-    return '' // الوحدة مدمجة مسبقاً في النص
+    return '' 
   }
   if (props.icon === 'bp') return 'mmHg'
   if (props.icon === 'heart') return 'bpm'

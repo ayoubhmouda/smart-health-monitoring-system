@@ -2,28 +2,34 @@
 <template>
   <div class="w-full min-h-screen bg-[#F0F6F5] text-slate-600 font-sans antialiased p-6 flex flex-col gap-6" dir="rtl">
     
-    <!-- هيدر الشاشة البارز والمنقح -->
-    <header class="w-full bg-white rounded-3xl border border-slate-200/80 p-6 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 select-none">
-      <div>
-        <div class="flex items-center gap-2 mb-1">
-          <span class="text-xs text-teal-600 font-mono font-extrabold uppercase tracking-wider">سجل الملف الطبي</span>
-          <span class="text-xs bg-teal-50 text-teal-700 px-2.5 py-0.5 rounded-full font-bold">صلاحيات الطبيب المعالج</span>
+    <!-- 🟢 الترويسة العلوية باللون التركوازي الغامق الموحد لهوية نظام MediWatch -->
+    <header class="w-full rounded-3xl border border-white/10 p-6 shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-gradient-to-b from-[#0a3d48] via-[#0e4f5e] to-[#08323c] text-white select-none shrink-0">
+      <div class="flex items-center gap-3">
+        <!-- أيقونة الملف الطبي الموحدة من إيكونيفاي داخل غلاف زجاجي ناعم -->
+        <div class="w-10 h-10 shrink-0 rounded-xl bg-white/10 border border-white/5 flex items-center justify-center text-teal-300">
+          <Icon icon="solar:document-text-bold" class="w-5 h-5" />
         </div>
-        <h1 class="text-2xl font-extrabold text-slate-800 tracking-tight">إدارة الملف الطبي للمريض: {{ patientName }}</h1>
-        <p class="text-xs text-slate-400 mt-1">تحديث البيانات الديموغرافية، التاريخ المرضي، إدارة مقدمي الرعاية، والتحكم بالقواعد السريرية الخاصة</p>
+        <div>
+          <div class="flex items-center gap-2 mb-1.5">
+            <span class="text-xs text-teal-300 font-mono font-extrabold uppercase tracking-wider">سجل الملف الطبي</span>
+            <span class="text-[10px] bg-white/10 text-teal-200 border border-white/5 px-2.5 py-0.5 rounded-full font-bold">صلاحيات الطبيب المعالج</span>
+          </div>
+          <h1 class="text-xl md:text-2xl font-extrabold text-white tracking-tight">إدارة الملف الطبي للمريض: {{ patientName }}</h1>
+          <p class="text-xs text-teal-200/70 mt-1 font-medium">تحديث البيانات الديموغرافية، التاريخ المرضي، إدارة مقدمي الرعاية، والتحكم بالقواعد السريرية الخاصة</p>
+        </div>
       </div>
 
-      <!-- أزرار الرجوع وحفظ التغييرات الشاملة للملف الشخصي والسريري -->
-      <div class="flex items-center gap-2.5">
+      <!-- أزرار الرجوع وحفظ التغييرات الشاملة للملف الشخصي والسريري بالهوية الزجاجية المتناسقة -->
+      <div class="flex items-center gap-2.5 w-full sm:w-auto justify-end select-none">
         <button 
           @click="router.push('/dashboard')" 
-          class="px-5 py-2.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-500 font-bold text-xs transition-all shadow-xs"
+          class="px-5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/20 font-bold text-xs backdrop-blur-sm transition-all cursor-pointer"
         >
           لوحة المراقبة
         </button>
         <button 
           @click="saveAllChanges" 
-          class="bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs px-6 py-2.5 rounded-xl shadow-sm hover:shadow transition-all"
+          class="bg-teal-500/20 hover:bg-teal-500/30 text-teal-200 border border-teal-400/20 font-bold text-xs px-6 py-2.5 rounded-xl backdrop-blur-sm transition-all shadow-lg shadow-teal-900/10 cursor-pointer"
         >
           حفظ التغييرات السريرية
         </button>
@@ -36,14 +42,17 @@
       <!-- العمود الأيمن: السوابق الطبية وإدارة كادر مقدمي الرعاية -->
       <div class="lg:col-span-5 flex flex-col gap-6">
         
-        <!-- 1. البيانات الديموغرافية الأساسية للمريض القابلة للتعديل والتحرير -->
-        <div class="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-sm space-y-4">
-          <h3 class="font-extrabold text-slate-800 text-xs flex items-center gap-2 pb-3 border-b border-slate-100">
-            <span class="w-5 h-5 bg-teal-50 text-teal-700 font-bold rounded-lg flex items-center justify-center border border-teal-100 font-mono">1</span>
-            <span>البيانات الديموغرافية الأساسية للمريض</span>
-          </h3>
+        <!-- 🟢 1. البيانات الديموغرافية الأساسية للمريض (ترويسة تركوازية وأيقونة بيضاء مقابلة لليسار) -->
+        <div class="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden flex flex-col">
+          <div class="bg-[#0a3d48] text-white p-4.5 rounded-t-3xl flex items-center justify-between gap-3 select-none">
+            <div class="flex items-center gap-2">
+              <span class="w-5 h-5 bg-white/10 text-teal-300 border border-white/5 font-bold rounded-lg flex items-center justify-center text-[10px] font-mono">1</span>
+              <span class="font-extrabold text-white text-xs">البيانات الديموغرافية الأساسية للمريض</span>
+            </div>
+            <Icon icon="solar:user-bold" class="w-5 h-5 text-white shrink-0" />
+          </div>
 
-          <div class="space-y-3.5 text-xs">
+          <div class="p-6 space-y-3.5 text-xs">
             <div>
               <label class="block text-sm font-bold text-slate-700 mb-1.5">الاسم الكامل للمريض <span class="text-rose-500">*</span></label>
               <input 
@@ -85,16 +94,19 @@
           </div>
         </div>
 
-        <!-- 2. بطاقة السوابق الطبية والأمراض المزمنة -->
-        <div class="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-sm space-y-4">
-          <h3 class="font-extrabold text-slate-800 text-xs flex items-center gap-2 pb-3 border-b border-slate-100">
-            <span class="w-5 h-5 bg-teal-50 text-teal-700 font-bold rounded-lg flex items-center justify-center border border-teal-100 font-mono">2</span>
-            <span>التاريخ الطبي والمزمن الفعلي للمريض</span>
-          </h3>
+        <!-- 🟢 2. بطاقة السوابق الطبية والأمراض المزمنة (ترويسة تركوازية وأيقونة بيضاء مقابلة لليسار) -->
+        <div class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
+          <div class="bg-[#0a3d48] text-white p-4.5 rounded-t-3xl flex items-center justify-between gap-3 select-none">
+            <div class="flex items-center gap-2">
+              <span class="w-5 h-5 bg-white/10 text-teal-300 border border-white/5 font-bold rounded-lg flex items-center justify-center text-[10px] font-mono">2</span>
+              <span class="font-extrabold text-white text-xs">التاريخ الطبي والمزمن الفعلي للمريض</span>
+            </div>
+            <Icon icon="solar:notes-bold" class="w-5 h-5 text-white shrink-0" />
+          </div>
 
-          <div class="space-y-3">
+          <div class="p-6 space-y-3">
             <label class="flex items-start gap-3 bg-slate-50/50 p-4 border border-slate-200 rounded-2xl cursor-pointer hover:bg-slate-50 transition-colors">
-              <input type="checkbox" v-model="medicalHistoryFlags.heart_disease" class="rounded text-teal-600 focus:ring-teal-500/50 w-4 h-4 mt-0.5" />
+              <input type="checkbox" v-model="medicalHistoryFlags.heart_disease" class="rounded text-teal-600 focus:ring-teal-500/50 w-4 h-4 mt-0.5 cursor-pointer" />
               <div>
                 <p class="text-sm font-bold text-slate-750">التاريخ المرضي لأمراض القلب (Heart Disease)</p>
                 <p class="text-[10px] text-slate-400 mt-0.5 font-medium">قصور القلب، احتشاء عضلة القلب، أو الذبحة الصدرية السابقة</p>
@@ -102,7 +114,7 @@
             </label>
 
             <label class="flex items-start gap-3 bg-slate-50/50 p-4 border border-slate-200 rounded-2xl cursor-pointer hover:bg-slate-50 transition-colors">
-              <input type="checkbox" v-model="medicalHistoryFlags.chronic_conditions" class="rounded text-teal-600 focus:ring-teal-500/50 w-4 h-4 mt-0.5" />
+              <input type="checkbox" v-model="medicalHistoryFlags.chronic_conditions" class="rounded text-teal-600 focus:ring-teal-500/50 w-4 h-4 mt-0.5 cursor-pointer" />
               <div>
                 <p class="text-xs font-bold text-slate-750">الإصابة بأمراض مزمنة عامة (Chronic Conditions)</p>
                 <p class="text-[10px] text-slate-400 mt-0.5 font-medium">داء السكري (Type 2 Diabetes)، أو ارتفاع ضغط الدم (Hypertension)</p>
@@ -111,115 +123,124 @@
           </div>
         </div>
 
-        <!-- 3. بطاقة إدارة الكادر المتعدد لمقدمي الرعاية (تعرض الجميع مع إسناد وحذف وتعديل معدد) -->
-        <div class="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-sm space-y-4">
-          <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-            <h3 class="font-extrabold text-slate-800 text-xs flex items-center gap-2">
-              <span class="w-5 h-5 bg-teal-50 text-teal-700 font-bold rounded-lg flex items-center justify-center border border-teal-100 font-mono">3</span>
-              <span>مقدمو الرعاية المتابعون للحالة (Caregivers)</span>
-            </h3>
-
-            <button 
-              @click="openAssignCaregiverModal" 
-              class="text-[10px] font-bold text-teal-700 bg-teal-50 hover:bg-teal-100 border border-teal-200 px-3 py-1.5 rounded-xl transition-all"
-            >
-              + إسناد مقدم رعاية
-            </button>
+        <!-- 🟢 3. بطاقة إدارة الكادر لمقدمي الرعاية (ترويسة تركوازية وزر الإضافة وأيقونة العائلة على اليسار المقابل) -->
+        <div class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
+          <div class="bg-[#0a3d48] text-white p-4.5 rounded-t-3xl flex items-center justify-between gap-3 select-none">
+            <div class="flex items-center gap-2">
+              <span class="w-5 h-5 bg-white/10 text-teal-300 border border-white/5 font-bold rounded-lg flex items-center justify-center text-[10px] font-mono">3</span>
+              <span class="font-extrabold text-white text-xs">مقدمو الرعاية المتابعون للحالة</span>
+            </div>
+            <!-- زر الإسناد وأيقونة العائلة على اليسار المقابل تماماً -->
+            <div class="flex items-center gap-3 select-none">
+              <button 
+                @click="openAssignCaregiverModal" 
+                class="text-[9px] font-bold text-teal-200 bg-white/10 hover:bg-white/20 border border-white/10 px-2.5 py-1.5 rounded-xl transition-all cursor-pointer"
+              >
+                + إسناد مقدم رعاية
+              </button>
+              <Icon icon="solar:users-group-rounded-bold" class="w-5 h-5 text-white shrink-0" />
+            </div>
           </div>
 
-          <div v-if="loadingCaregivers" class="text-center py-6 text-xs text-slate-400 font-bold animate-pulse">
-            جاري تحميل كادر مقدمي الرعاية...
-          </div>
+          <div class="p-6 space-y-4">
+            <div v-if="loadingCaregivers" class="text-center py-6 text-xs text-slate-400 font-bold animate-pulse">
+              جاري تحميل كادر مقدمي الرعاية...
+            </div>
 
-          <div v-else-if="assignedCaregivers.length === 0" class="text-center py-6 text-xs text-slate-400 font-bold border border-dashed border-slate-200 rounded-2xl">
-            لا يوجد مقدمو رعاية مسندون لمتابعة هذا المريض حالياً.
-          </div>
+            <div v-else-if="assignedCaregivers.length === 0" class="text-center py-6 text-xs text-slate-400 font-bold border border-dashed border-slate-200 rounded-2xl select-none">
+              لا يوجد مقدمو رعاية مسندون لمتابعة هذا المريض حالياً.
+            </div>
 
-          <!-- جدول السجلات لمقدمي الرعاية المتابعين -->
-          <div v-else class="w-full overflow-hidden border border-slate-200 rounded-2xl">
-            <table class="w-full text-right border-collapse text-[11px]">
-              <thead class="bg-slate-50 border-b border-slate-200">
-                <tr class="text-slate-500 font-bold">
-                  <th class="p-2.5 pr-4">الاسم</th>
-                  <th class="p-2.5">اسم المستخدم</th> <!-- 🟢 تم إضافة عمود اسم المستخدم هنا -->
-                  <th class="p-2.5">رقم الهاتف</th>
-                  <th class="p-2.5 text-left pl-4">الإجراءات</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-slate-100">
-                <tr v-for="care in assignedCaregivers" :key="care.id" class="hover:bg-slate-50/50">
-                  <td class="p-2.5 pr-4 font-bold text-slate-800">{{ care.full_name }}</td>
-                  <td class="p-2.5 font-mono text-slate-500 font-bold">@{{ care.username }}</td> <!-- 🟢 تم عرض اسم المستخدم للمستودع بالـ @ -->
-                  <td class="p-2.5 font-mono text-slate-600 font-bold">{{ care.phone_number || 'غير مضاف' }}</td>
-                  <td class="p-2.5 text-left pl-4">
-                    <div class="flex items-center justify-end gap-1.5">
-                      <button @click="openEditCaregiverModal(care)" class="text-[9px] font-bold text-sky-700 bg-sky-50 border border-sky-100 px-2.5 py-1 rounded-lg">تعديل</button>
-                      <button @click="removeCaregiver(care.id)" class="text-[9px] font-bold text-rose-600 bg-rose-50 border border-rose-100 px-2.5 py-1 rounded-lg">حذف</button>
-                    </div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+            <!-- جدول السجلات لمقدمي الرعاية المتابعين -->
+            <div v-else class="w-full overflow-hidden border border-slate-200 rounded-2xl select-none">
+              <table class="w-full text-right border-collapse text-[11px]">
+                <thead class="bg-slate-50 border-b border-slate-200">
+                  <tr class="text-slate-500 font-bold">
+                    <th class="p-2.5 pr-4">الاسم</th>
+                    <th class="p-2.5">اسم المستخدم</th> 
+                    <th class="p-2.5">رقم الهاتف</th>
+                    <th class="p-2.5 text-left pl-4">الإجراءات</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                  <tr v-for="care in assignedCaregivers" :key="care.id" class="hover:bg-slate-50/50">
+                    <td class="p-2.5 pr-4 font-bold text-slate-800">{{ care.full_name }}</td>
+                    <td class="p-2.5 font-mono text-slate-500 font-bold">@{{ care.username }}</td> 
+                    <td class="p-2.5 font-mono text-slate-600 font-bold">{{ care.phone_number || 'غير مضاف' }}</td>
+                    <td class="p-2.5 text-left pl-4">
+                      <div class="flex items-center justify-end gap-1.5">
+                        <button @click="openEditCaregiverModal(care)" class="text-[9px] font-bold text-sky-700 bg-sky-50 border border-sky-100 px-2.5 py-1 rounded-lg cursor-pointer">تعديل</button>
+                        <button @click="removeCaregiver(care.id)" class="text-[9px] font-bold text-rose-600 bg-rose-50 border border-rose-100 px-2.5 py-1 rounded-lg cursor-pointer">حذف</button>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
 
       </div>
 
-      <!-- العمود الأيسر: 4. القواعد والبروتوكولات السريرية الخاصة والمخصصة للمريض حصراً -->
-      <div class="lg:col-span-7 bg-white rounded-3xl border border-slate-200/80 p-6 shadow-sm flex flex-col gap-4">
-        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
-          <h3 class="font-extrabold text-slate-800 text-xs flex items-center gap-2">
-            <span class="w-5 h-5 bg-teal-50 text-teal-700 font-bold rounded-lg flex items-center justify-center border border-teal-100 font-mono">4</span>
-            <span>البروتوكولات السريرية الخاصة بالمريض</span>
-          </h3>
-
-          <!-- زر توجيه الطبيب لباني القواعد الخاص بالمريض -->
-          <button 
-            @click="router.push(`/patients/${patientId}/rules/new`)" 
-            class="text-[11px] font-bold text-teal-700 bg-teal-50 hover:bg-teal-100 border border-teal-200 px-3 py-1.5 rounded-xl transition-all"
-          >
-            + إضافة قاعدة فسيولوجية مخصصة
-          </button>
+      <!-- العمود الأيسر: 4. القواعد والبروتوكولات السريرية الخاصة والمخصصة للمريض حصراً (ترويسة تركوازية وأيقونة بيضاء وزر الإضافة على اليسار) -->
+      <div class="lg:col-span-7 bg-white rounded-3xl border border-slate-200 shadow-sm flex flex-col overflow-hidden">
+        <div class="bg-[#0a3d48] text-white p-4.5 rounded-t-3xl flex items-center justify-between gap-3 select-none">
+          <div class="flex items-center gap-2">
+            <span class="w-5 h-5 bg-white/10 text-teal-300 border border-white/5 font-bold rounded-lg flex items-center justify-center text-[10px] font-mono">4</span>
+            <span class="font-extrabold text-white text-xs">البروتوكولات السريرية الخاصة بالمريض</span>
+          </div>
+          <!-- زر باني القواعد وأيقونة التحكم على اليسار المقابل تماماً للعنوان -->
+          <div class="flex items-center gap-3 select-none">
+            <button 
+              @click="router.push(`/patients/${patientId}/rules/new`)" 
+              class="text-[9px] font-bold text-teal-200 bg-white/10 hover:bg-white/20 border border-white/10 px-2.5 py-1.5 rounded-xl transition-all cursor-pointer"
+            >
+              + إضافة قاعدة فسيولوجية مخصصة
+            </button>
+            <Icon icon="solar:tuning-2-bold" class="w-5 h-5 text-white shrink-0" />
+          </div>
         </div>
 
-        <div v-if="loadingRules" class="text-center py-6 text-xs text-slate-400 font-bold animate-pulse">
-          جاري جلب القواعد المخصصة للمريض...
-        </div>
+        <div class="p-6 flex-1 flex flex-col gap-4">
+          <div v-if="loadingRules" class="text-center py-6 text-xs text-slate-400 font-bold animate-pulse">
+            جاري جلب القواعد المخصصة للمريض...
+          </div>
 
-        <div v-else-if="customRules.length === 0" class="text-center py-12 text-xs text-slate-400 font-bold border border-dashed border-slate-200 rounded-3xl">
-          لا توجد قواعد مخصصة مضافة لهذا المريض حالياً، يطبق النظام البروتوكولات العامة للمستشفى فقط.
-        </div>
+          <div v-else-if="customRules.length === 0" class="text-center py-12 text-xs text-slate-400 font-bold border border-dashed border-slate-200 rounded-3xl select-none">
+            لا توجد قواعد مخصصة مضافة لهذا المريض حالياً، يطبق النظام البروتوكولات العامة للمستشفى فقط.
+          </div>
 
-        <div v-else class="space-y-3">
-          <div 
-            v-for="rule in customRules" 
-            :key="rule.id" 
-            class="p-4 bg-slate-50/50 border border-slate-200 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3"
-          >
-            <div>
-              <div class="flex items-center gap-2 mb-1.5">
-                <span class="text-[10px] bg-rose-50 text-rose-700 font-extrabold px-2.5 py-0.5 rounded-full border border-rose-200 font-mono">
-                  {{ rule.severity }}
-                </span>
-                <h4 class="font-extrabold text-slate-800 text-xs">{{ rule.name }}</h4>
+          <div v-else class="space-y-3">
+            <div 
+              v-for="rule in customRules" 
+              :key="rule.id" 
+              class="p-4 bg-slate-50/50 border border-slate-200 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+            >
+              <div>
+                <div class="flex items-center gap-2 mb-1.5">
+                  <span class="text-[10px] bg-rose-50 text-rose-700 font-extrabold px-2.5 py-0.5 rounded-full border border-rose-200 font-mono">
+                    {{ rule.severity }}
+                  </span>
+                  <h4 class="font-extrabold text-slate-800 text-xs">{{ rule.name }}</h4>
+                </div>
+                <p class="text-[10px] text-slate-400 font-semibold leading-relaxed">التوصية: {{ rule.action_template }}</p>
               </div>
-              <p class="text-[10px] text-slate-400 font-semibold leading-relaxed">التوصية: {{ rule.action_template }}</p>
-            </div>
 
-            <!-- أزرار الإجراءات الخاصة بقاعدة المريض الفردي -->
-            <div class="flex items-center gap-2 flex-shrink-0">
-              <button 
-                @click="router.push(`/patients/${patientId}/rules/edit/${rule.id}`)"
-                class="text-[11px] font-bold text-sky-700 bg-sky-50 hover:bg-sky-100 border border-sky-200 px-3 py-1.5 rounded-xl transition-all"
-              >
-                تعديل
-              </button>
-              <button 
-                @click="deleteCustomRule(rule.id)"
-                class="text-[11px] font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200 px-3 py-1.5 rounded-xl transition-all"
-              >
-                حذف
-              </button>
+              <!-- أزرار الإجراءات الخاصة بقاعدة المريض الفردي -->
+              <div class="flex items-center gap-2 flex-shrink-0">
+                <button 
+                  @click="router.push(`/patients/${patientId}/rules/edit/${rule.id}`)"
+                  class="text-[11px] font-bold text-sky-700 bg-sky-50 hover:bg-sky-100 border border-sky-200 px-3 py-1.5 rounded-xl transition-all cursor-pointer"
+                >
+                  تعديل
+                </button>
+                <button 
+                  @click="deleteCustomRule(rule.id)"
+                  class="text-[11px] font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200 px-3 py-1.5 rounded-xl transition-all cursor-pointer"
+                >
+                  حذف
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -232,13 +253,13 @@
       <div class="bg-white rounded-3xl border border-slate-200 shadow-xl w-full max-w-md p-6 space-y-4" dir="rtl">
         <div class="flex items-center justify-between border-b border-slate-100 pb-3">
           <h3 class="text-sm font-extrabold text-slate-800">إسناد أو إنشاء حساب مقدم رعاية للمريض</h3>
-          <button @click="showAssignModal = false" class="text-slate-400 hover:text-slate-600 font-bold text-xl">✕</button>
+          <button @click="showAssignModal = false" class="text-slate-400 hover:text-slate-600 font-bold text-xl cursor-pointer">✕</button>
         </div>
 
         <div class="space-y-4 text-xs">
           <div>
             <label class="block font-bold text-slate-600 mb-1.5">خيارات مقدم الرعاية</label>
-            <select v-model="caregiverForm.option" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 outline-none font-bold text-slate-900">
+            <select v-model="caregiverForm.option" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 outline-none font-bold text-slate-900 cursor-pointer">
               <option value="existing">اختيار مقدم رعاية مسجّل مسبقاً</option>
               <option value="new">إنشاء حساب جديد كلياً لمقدم الرعاية</option>
             </select>
@@ -247,7 +268,7 @@
           <!-- أ. في حال اختيار مقدم رعاية مسجل مسبقاً -->
           <div v-if="caregiverForm.option === 'existing'" class="space-y-2">
             <label class="block font-bold text-slate-600 mb-1">اختر مقدم الرعاية من القائمة</label>
-            <select v-model="caregiverForm.existing_id" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 outline-none font-bold text-slate-900">
+            <select v-model="caregiverForm.existing_id" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 outline-none font-bold text-slate-900 cursor-pointer">
               <option v-for="care in allCaregivers" :key="care.id" :value="care.id">
                 {{ care.full_name }} (@{{ care.username }})
               </option>
@@ -275,8 +296,8 @@
           </div>
 
           <div class="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
-            <button type="button" @click="showAssignModal = false" class="px-4 py-2 rounded-xl text-slate-500 font-bold hover:bg-slate-100">إلغاء</button>
-            <button @click="submitAssignCaregiver" class="bg-teal-600 hover:bg-teal-700 text-white font-bold px-5 py-2 rounded-xl shadow-xs">حفظ وإسناد مقدم الرعاية</button>
+            <button type="button" @click="showAssignModal = false" class="px-4 py-2 rounded-xl text-slate-500 font-bold hover:bg-slate-100 cursor-pointer">إلغاء</button>
+            <button @click="submitAssignCaregiver" class="bg-teal-600 hover:bg-teal-700 text-white font-bold px-5 py-2 rounded-xl shadow-xs cursor-pointer">حفظ وإسناد مقدم الرعاية</button>
           </div>
         </div>
       </div>
@@ -287,7 +308,7 @@
       <div class="bg-white rounded-3xl border border-slate-200 shadow-xl w-full max-w-md p-6 space-y-4" dir="rtl">
         <div class="flex items-center justify-between border-b border-slate-100 pb-3">
           <h3 class="text-sm font-extrabold text-slate-800">تعديل بيانات حساب مقدم الرعاية</h3>
-          <button @click="showEditCaregiverModal = false" class="text-slate-400 hover:text-slate-600 font-bold text-xl">✕</button>
+          <button @click="showEditCaregiverModal = false" class="text-slate-400 hover:text-slate-600 font-bold text-xl cursor-pointer">✕</button>
         </div>
 
         <form @submit.prevent="submitEditCaregiver" class="space-y-4 text-xs">
@@ -305,8 +326,8 @@
           </div>
 
           <div class="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
-            <button type="button" @click="showEditCaregiverModal = false" class="px-4 py-2 rounded-xl text-slate-500 font-bold hover:bg-slate-100">إلغاء</button>
-            <button type="submit" class="bg-sky-600 hover:bg-sky-700 text-white font-bold px-5 py-2 rounded-xl shadow-xs">حفظ التعديلات</button>
+            <button type="button" @click="showEditCaregiverModal = false" class="px-4 py-2 rounded-xl text-slate-500 font-bold hover:bg-slate-100 cursor-pointer">إلغاء</button>
+            <button type="submit" class="bg-sky-600 hover:bg-sky-700 text-white font-bold px-5 py-2 rounded-xl shadow-xs cursor-pointer">حفظ التعديلات</button>
           </div>
         </form>
       </div>
@@ -318,6 +339,7 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { Icon } from '@iconify/vue' // 🟢 دمج مستورد الأيقونة الفردي والمثالي لمنع التكرار والكراش
 import api from '../api'
 
 const router = useRouter()

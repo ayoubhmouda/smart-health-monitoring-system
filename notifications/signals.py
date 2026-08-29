@@ -47,18 +47,23 @@ def create_notifications(sender, instance, created, **kwargs):
 
 @receiver(post_save, sender=Insight)
 def broadcast_insight_notification(sender, instance, created, **kwargs):
-    # 🟢 البث الفوري عبر السوكيت في الحالتين (الإنشاء والتعديل) لإبقاء شاشة المراقبة الطبية حية طوال الخطر
+    # البث الفوري عبر السوكيت في الحالتين (الإنشاء والتعديل) لإبقاء شاشة المراقبة الطبية حية طوال الخطر
     rule_name = None
     action_template = None
     is_global_rule = False
     try:
         from rules.engine import RuleEngine
-        # نقوم بتفعيل محرك تقييم الإجراءات العلاجية فقط عند الإنشاء الأول لتجنب الكتابة المكررة
+        # تفعيل محرك تقييم الإجراءات العلاجية فقط عند الإنشاء الأول لتجنب تكرار كتابة الإنذارات
         if created:
             RuleEngine().process(instance)
         
         from rules.models import CorrectiveAction
-        action = CorrectiveAction.objects.filter(insight=instance).first()
+        # 🟢 تصفية ذكية بالباك إند: جلب أحدث إجراء تصحيحي مرتبط بقانون نشط حالياً فقط!
+        action = CorrectiveAction.objects.filter(
+            insight=instance,
+            rule__is_active=True  # 👈 صمام الأمان: استبعاد القوانين المعطلة
+        ).order_by('-id').first()  # 👈 جلب الأحدث دائماً
+        
         if action and action.rule:
             rule_name = action.rule.name
             action_template = action.rule.action_template
@@ -93,3 +98,4 @@ def broadcast_insight_notification(sender, instance, created, **kwargs):
                 "timestamp": timezone.now().strftime('%Y-%m-%dT%H:%M:%S.%fZ')
             }
         )
+

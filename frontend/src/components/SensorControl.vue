@@ -1,8 +1,8 @@
-<!-- SensorControl.vue -->
+<!-- frontend/src/components/SensorControl.vue -->
 <template>
   <div class="relative rounded-3xl border border-white/10 shadow-xl flex flex-col gap-5 select-none bg-gradient-to-b from-[#0a3d48] via-[#0e4f5e] to-[#08323c] p-5 sm:p-6 text-cyan-100/80" dir="rtl">
     
-    <!-- هيدر لوحة التحكم المركزية -->
+    <!-- هيدر لوحة التحكم المركزية الخالي من العبارات المملة -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-3 mb-2 border-b border-white/10 gap-3">
       <div class="flex items-center gap-2.5">
         <div class="w-7 h-7 rounded-xl bg-white/10 flex items-center justify-center text-teal-300 backdrop-blur-sm">
@@ -17,7 +17,7 @@
       <div class="flex flex-wrap items-center gap-1.5 self-start sm:self-auto">
         <button 
           @click="openAddSensorModal" 
-          class="group relative bg-teal-500/20 hover:bg-teal-500/30 text-teal-200 border border-teal-400/20 font-bold text-[10px] px-2.5 py-2 rounded-lg backdrop-blur-sm transition-all flex items-center gap-1.5 shadow-lg shadow-teal-900/10"
+          class="group relative bg-[#0d9488]/30 hover:bg-[#0d9488]/50 text-teal-200 border border-teal-400/20 font-bold text-[10px] px-2.5 py-2 rounded-lg backdrop-blur-sm transition-all flex items-center gap-1.5 shadow-lg shadow-teal-900/10 cursor-pointer"
           title="ربط مستشعر مخصص جديد"
         >
           <Plus :size="13" stroke-width="2.5" />
@@ -26,7 +26,7 @@
 
         <button 
           @click="fetchSensors" 
-          class="p-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-cyan-200/70 hover:text-cyan-100 transition-all backdrop-blur-sm"
+          class="p-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-cyan-200/70 hover:text-cyan-100 transition-all backdrop-blur-sm cursor-pointer"
           title="تحديث قائمة الحساسات"
         >
           <RefreshCw :size="14" stroke-width="2" :class="loading ? 'animate-spin' : ''" />
@@ -46,7 +46,7 @@
     </div>
 
     <div v-else class="space-y-4">
-      <!-- أولاً: التحكم المركزي الموحد -->
+      <!-- أولاً: التحكم المركزي الموحد للسيناريوهات -->
       <div class="bg-white/5 backdrop-blur-md p-4 rounded-2xl border border-white/10 grid grid-cols-1 lg:grid-cols-12 gap-3 items-center">
         
         <div class="lg:col-span-4 space-y-0.5">
@@ -58,7 +58,7 @@
           <button 
             @click="toggleMasterSource"
             :class="masterSourceBtnClass"
-            class="w-full text-[11px] font-bold py-2 px-3 rounded-xl transition-all duration-300 text-center border shadow-sm flex items-center justify-center gap-1.5 backdrop-blur-sm"
+            class="w-full text-[11px] font-bold py-2 px-3 rounded-xl transition-all duration-300 text-center border shadow-sm flex items-center justify-center gap-1.5 backdrop-blur-sm cursor-pointer"
           >
             <ToggleLeft v-if="!isMasterSimulated" :size="14" />
             <ToggleRight v-else :size="14" />
@@ -98,97 +98,121 @@
           <ChevronDown :size="14" class="text-cyan-300/50 group-open:rotate-180 transition-transform duration-200" />
         </summary>
 
-        <!-- شبكة 4x2 مكثفة ومتقاربة -->
-        <div class="p-3 bg-black/10 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+        <!-- 🟢 شبكة الكروت البيضاء المضيئة المفتوحة لتقليل التعتيم الشديد والمنسجمة مع الهوية السريرية -->
+        <div class="p-3 bg-teal-950/20 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 select-none">
           <div 
             v-for="sensor in pairedSensors" 
             :key="sensor.id" 
-            class="p-3 rounded-2xl border flex flex-col justify-between gap-2 transition-all duration-300 relative overflow-hidden group/card"
-            :class="sensor.is_active ? 'border-white/20 bg-white/5 hover:bg-white/10 hover:border-teal-400/30' : 'border-white/5 bg-black/20 opacity-50'"
+            class="p-3 rounded-2xl border flex flex-col justify-between gap-3 transition-all duration-300 relative overflow-visible"
+            :class="[
+              sensor.is_active 
+                ? 'bg-white text-slate-700 border-slate-200/80 shadow-xs' 
+                : 'bg-slate-100 text-slate-400 border-slate-200/50 opacity-60'
+            ]"
           >
-            <!-- رأس الكرت والتبديل -->
-            <div class="flex items-start justify-between gap-2">
+            <!-- رأس الكرت وبداخله السويتش النشط مع زر الثلاث نقاط التفاعلي الجديد للاجراءات والمصدر -->
+            <div class="flex items-start justify-between gap-2 relative">
               <div class="min-w-0">
-                <h4 class="font-extrabold text-white text-[11px] truncate flex items-center gap-1">
-                  <Activity :size="12" class="text-teal-300/70 flex-shrink-0" />
+                <h4 class="font-black text-slate-800 text-[11px] truncate flex items-center gap-1">
+                  <icon  :size="12" :class="sensor.is_active ? 'text-[#0d9488]' : 'text-slate-400'" class="flex-shrink-0" />
                   {{ translateSensorName(sensor.sensor_type?.name) }}
                 </h4>
-                <span class="text-[9px] font-mono font-bold text-cyan-300/40 block">ID: {{ sensor.device_identifier }}</span>
+                <span class="text-[9px] font-mono font-bold text-slate-400 block mt-0.5">ID: {{ sensor.device_identifier }}</span>
               </div>
 
-              <button 
-                @click="toggleSensorActive(sensor)" 
-                class="relative inline-flex h-4 w-7 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out outline-none"
-                :class="sensor.is_active ? 'bg-emerald-500' : 'bg-slate-600'"
-                :title="sensor.is_active ? 'إيقاف' : 'تشغيل'"
-              >
-                <span 
-                  class="pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white shadow transition duration-200 ease-in-out"
-                  :class="sensor.is_active ? 'translate-x-0' : '-translate-x-3'" 
-                ></span>
-              </button>
+              <!-- 🟢 حلقة الإجراءات المجمعة بداخل زر ثلاث نقاط أنيق ومنزلق -->
+              <div class="flex items-center gap-1">
+                <button 
+                  v-if="sensor.is_active"
+                  @click.stop="toggleCardMenu(sensor.id)"
+                  class="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer shrink-0"
+                  title="الإجراءات"
+                >
+                  <MoreVertical :size="14" stroke-width="2.5" />
+                </button>
+
+                <!-- 🟢 منبثقة الخيارات المنفردة للحساس (تغيير المصدر من محاكي لحقيقي بشكل منفرد، وتعديل المسمى، والحذف) -->
+                <div 
+                  v-if="activeMenuSensorId === sensor.id"
+                  class="absolute left-0 top-7 w-36 bg-white border border-slate-200 rounded-xl shadow-lg z-30 py-1.5 text-[10px] font-bold text-slate-700 animate-[fadeIn_0.15s_ease-out]"
+                >
+                  <button 
+                    @click="toggleSingleSensorSource(sensor)"
+                    class="w-full text-right px-3.5 py-2 hover:bg-slate-50 transition-colors flex items-center gap-1.5 text-slate-700 cursor-pointer"
+                  >
+                    <RefreshCw :size="11" />
+                    <span>{{ getConfig(sensor)?.source === 'SIMULATED' ? 'تحويل لبث حقيقي' : 'تحويل لمحاكاة' }}</span>
+                  </button>
+                  <button 
+                    @click="openRenameModal(sensor)"
+                    class="w-full text-right px-3.5 py-2 hover:bg-slate-50 transition-colors flex items-center gap-1.5 text-slate-700 cursor-pointer"
+                  >
+                    <Pencil :size="11" />
+                    <span>تعديل المعرّف</span>
+                  </button>
+                  <button 
+                    @click="deleteSensor(sensor.id)"
+                    class="w-full text-right px-3.5 py-2 hover:bg-slate-50 hover:text-rose-600 transition-colors flex items-center gap-1.5 text-rose-500 border-t border-slate-100 cursor-pointer"
+                  >
+                    <Trash2 :size="11" />
+                    <span>حذف الجهاز</span>
+                  </button>
+                </div>
+
+                <!-- سويتش الإيقاف والتشغيل السريع -->
+                <button 
+                  @click="toggleSensorActive(sensor)" 
+                  class="relative inline-flex h-4 w-7 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out outline-none shrink-0"
+                  :class="sensor.is_active ? 'bg-emerald-500' : 'bg-slate-400'"
+                  :title="sensor.is_active ? 'إيقاف' : 'تشغيل'"
+                >
+                  <span 
+                    class="pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white shadow transition duration-200 ease-in-out"
+                    :class="sensor.is_active ? 'translate-x-0' : '-translate-x-3'" 
+                  ></span>
+                </button>
+              </div>
             </div>
 
-            <!-- ملف المحاكاة -->
+            <!-- ملف المحاكاة أو البث الفوري المباشر للحساس المنفرد -->
             <div class="space-y-1 text-[10px]">
-              <label class="block font-bold text-cyan-200/50">الملف:</label>
-              
               <template v-if="sensor.is_active">
                 <select
                   v-if="getConfig(sensor)?.source === 'SIMULATED'"
                   :value="getConfig(sensor)?.simulation_profile || 'normal'"
                   @change="changeProfile(sensor, $event.target.value)"
-                  class="w-full bg-slate-800/80 border border-slate-600/50 rounded-lg px-2 py-1 font-bold text-slate-200 outline-none text-right focus:border-teal-400/50 text-[10px]"
+                  class="w-full bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 font-bold text-slate-700 outline-none text-right focus:border-teal-500/50 text-[10px] cursor-pointer"
                 >
-                  <option value="normal">طبيعي</option>
-                  <option value="abnormal">شاذ</option>
-                  <option value="gradual_deterioration">تدهور</option>
-                  <option value="emergency_spike">حاد</option>
-                  <option value="random">عشوائي</option>
+                  <option value="normal">سيناريو طبيعي</option>
+                  <option value="abnormal">سيناريو شاذ</option>
+                  <option value="gradual_deterioration">تدهور تدريجي</option>
+                  <option value="emergency_spike">نوبة حادة</option>
+                  <option value="random">تغيير عشوائي</option>
                   <option value="custom">مخصص</option>
                 </select>
                 
-                <span v-else class="text-[10px] text-emerald-300 font-bold py-1 flex items-center gap-1 select-none font-mono bg-emerald-500/10 px-2 rounded-lg">
+                <span v-else class="text-[9px] text-emerald-700 font-extrabold py-1.5 flex items-center justify-center gap-1 select-none font-mono bg-emerald-50 border border-emerald-100 rounded-lg">
                   <Wifi :size="10" />
-                  بث فوري
+                  بث فيزيائي حقيقي (REAL)
                 </span>
               </template>
               
-              <div v-else class="text-[10px] text-slate-400 font-semibold py-1 bg-slate-800/30 rounded-lg text-center">
-                موقوف
+              <div v-else class="text-[10px] text-slate-400 font-bold py-1 bg-slate-200/50 border border-slate-200/20 rounded-lg text-center select-none">
+                الجهاز موقوف
               </div>
             </div>
 
-            <!-- أزرار الإجراءات -->
-            <div class="flex items-center justify-end gap-1 pt-2 border-t border-white/5">
-              <button 
-                @click="openRenameModal(sensor)" 
-                class="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-cyan-200/70 hover:text-cyan-100 transition-all"
-                title="تعديل المعرف"
-              >
-                <Pencil :size="12" stroke-width="2" />
-              </button>
-
-              <button 
-                @click="deleteSensor(sensor.id)" 
-                class="p-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 border border-rose-400/20 text-rose-400 hover:text-rose-300 transition-all"
-                title="حذف الحساس"
-              >
-                <Trash2 :size="12" stroke-width="2" />
-              </button>
-            </div>
-
-            <!-- مؤشر المصدر -->
-            <div class="absolute top-1.5 left-1.5 opacity-60">
-              <span v-if="getConfig(sensor)?.source === 'SIMULATED'" class="text-amber-400/70" title="محاكاة"><Cpu :size="8" /></span>
-              <span v-else class="text-emerald-400/70" title="جهاز فعلي"><Wifi :size="8" /></span>
+            <!-- مؤشر صغير يوضح مصدر الحساس في زاوية الكارت بشكل ناعم وغير ممل -->
+            <div class="absolute bottom-2 left-2.5 opacity-60">
+              <span v-if="getConfig(sensor)?.source === 'SIMULATED'" class="text-amber-500" title="بث محاكي بالـ CPU"><icon  :size="10" /></span>
+              <span v-else class="text-emerald-500" title="جهاز بث فسيولوجي فعلي"><Wifi :size="10" /></span>
             </div>
           </div>
         </div>
       </details>
     </div>
 
-    <!-- 1. منبثقة تعديل اسم الحساس (Rename Modal) -->
+    <!-- 1. منبثقة تعديل اسم الحساس -->
     <Teleport to="body">
       <div v-if="showRenameModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
         <div class="bg-slate-900 border border-slate-700 rounded-3xl shadow-2xl w-full max-w-md p-6 space-y-4 text-cyan-100">
@@ -222,7 +246,7 @@
       </div>
     </Teleport>
 
-    <!-- 2. منبثقة ربط حساس مخصص جديد (Add Sensor Modal) -->
+    <!-- 2. منبثقة ربط حساس مخصص جديد -->
     <Teleport to="body">
       <div v-if="showAddModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
         <div class="bg-slate-900 border border-slate-700 rounded-3xl shadow-2xl w-full max-w-md p-6 space-y-4 text-cyan-100">
@@ -275,7 +299,7 @@ import api from '../api'
 import { 
   Sliders, Plus, RefreshCw, Loader, MonitorOff, 
   ToggleLeft, ToggleRight, Wifi, Cpu, Activity, 
-  ChevronDown, Pencil, Trash2, X, Check 
+  ChevronDown, Pencil, Trash2, X, Check, MoreVertical 
 } from 'lucide-vue-next'
 
 const { t } = useI18n()
@@ -294,6 +318,17 @@ const showAddModal = ref(false)
 
 const renameForm = ref({ id: null, device_identifier: '' })
 const addForm = ref({ sensor_type_id: null, device_identifier: '' })
+
+// 🟢 معرف كرت القائمة المنسدلة المفتوح حالياً لزر الثلاث نقاط
+const activeMenuSensorId = ref(null)
+
+const toggleCardMenu = (sensorId) => {
+  if (activeMenuSensorId.value === sensorId) {
+    activeMenuSensorId.value = null
+  } else {
+    activeMenuSensorId.value = sensorId
+  }
+}
 
 function translateSensorName(name) {
   if (!name) return t('custom')
@@ -346,6 +381,23 @@ async function toggleSensorActive(sensor) {
     await fetchSensors()
   } catch (e) {
     console.error('فشل تغيير حالة الحساس:', e)
+  }
+}
+
+// 🟢 تبديل مصدر البث بشكل فردي ومنعزل لكل حساس من خلال زر الثلاث نقاط
+async function toggleSingleSensorSource(sensor) {
+  const cfg = getConfig(sensor)
+  if (!cfg?.id) return
+  const nextSource = cfg.source === 'SIMULATED' ? 'PHYSICAL' : 'SIMULATED'
+  loading.value = true
+  try {
+    await api.patch(`/api/data-source-configs/${cfg.id}/`, { source: nextSource })
+    activeMenuSensorId.value = null // إغلاق القائمة
+    await fetchSensors()
+  } catch (e) {
+    console.error('فشل تبديل مصدر الحساس المنفرد:', e)
+  } finally {
+    loading.value = false
   }
 }
 
@@ -470,6 +522,7 @@ const masterSourceBtnClass = computed(() => {
 const openRenameModal = (sensor) => {
   renameForm.value = { id: sensor.id, device_identifier: sensor.device_identifier }
   showRenameModal.value = true
+  activeMenuSensorId.value = null // إغلاق القائمة
 }
 
 const openAddSensorModal = () => {
@@ -477,12 +530,22 @@ const openAddSensorModal = () => {
   showAddModal.value = true
 }
 
+// 🟢 إغلاق قائمة الثلاث نقاط تلقائياً عند النقر في أي مكان خارج الكارت
+onMounted(() => {
+  window.addEventListener('click', () => {
+    activeMenuSensorId.value = null
+  })
+})
+
 watch(() => props.patientId, () => fetchSensors(), { immediate: true })
 
 onMounted(() => fetchSensorTypes())
 </script>
 
 <style scoped>
+.custom-scrollbar {
+  scrollbar-width: thin;
+}
 .custom-scrollbar::-webkit-scrollbar {
   width: 4px;
 }

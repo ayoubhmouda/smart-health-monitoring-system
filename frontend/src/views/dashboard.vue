@@ -1,4 +1,4 @@
-<!-- dashboard.vue -->
+<!-- src/views/dashboard.vue -->
 <template>
   <!-- الخلفية العامة: تدرج ناعم مع تأثير إضاءة محيطية دافئة بلون تراكوازي -->
   <!-- تم تثبيت الارتفاع h-screen + overflow-hidden هنا لضمان أن main هو الوحيد القابل للتمرير -->
@@ -10,7 +10,6 @@
     <!-- واجهة المراقبة الطبية قبل اختيار المريض (بطاقة زجاجية عائمة) -->
     <div v-if="!store.currentPatient" class="h-full flex-1 flex flex-col items-center justify-center text-center py-20 px-6">
       <div class="bg-white/80 backdrop-blur-xl border border-white/90 rounded-[2.5rem] p-10 shadow-2xl shadow-teal-950/5 max-w-md flex flex-col items-center relative overflow-hidden group hover:shadow-teal-900/10 transition-all duration-500">
-        <!-- لمسة إضاءة تراكوازية متدرجة بالخلفية -->
         <div class="absolute -top-12 -right-12 w-32 h-32 bg-teal-400/15 rounded-full blur-2xl"></div>
         
         <div class="w-20 h-20 rounded-3xl bg-gradient-to-br from-teal-500/10 to-teal-700/20 flex items-center justify-center text-teal-700 mb-6 shadow-inner border border-teal-500/20 group-hover:scale-105 transition-transform duration-300">
@@ -27,26 +26,31 @@
     </div>
 
     <!-- واجهة المراقبة الطبية بعد تحديد المريض -->
-    <!-- h-full بدل min-h-screen، عشان يرث الارتفاع الثابت من الجذر ويصير main قابل للتمرير الداخلي فعلياً -->
     <div v-else class="flex-1 flex flex-col min-w-0 h-full relative">
-
-      <!-- main هو المنطقة الوحيدة القابلة للتمرير، وتحتوي على الهيدر (يتحرك عادي) وبطاقة المريض (تلتصق بالأعلى) -->
       <main class="flex-1 min-h-0 overflow-y-auto">
 
-        <!-- 1. الترويسة العليا — عنصر عادي، يتحرك مع التمرير ويختفي مثل أي عنصر -->
-        <header class="px-8 pt-6 pb-2 select-none flex justify-between items-center">
-          <div>
-            <div class="flex items-center gap-2 mb-1">
-              <span class="w-2.5 h-2.5 rounded-full bg-teal-600 shadow-sm shadow-teal-500/50 animate-pulse"></span>
-              <h1 class="text-xl font-black text-teal-950 tracking-tight">لوحة تحكم المراقبة المباشرة <span class="text-teal-700/60 font-semibold text-sm">(Live Patient Dashboard)</span></h1>
+        <!-- Page Header -->
+        <header class="px-6 sm:px-7 xl:px-9 pt-6 pb-5">
+          <div class="flex items-center justify-between gap-4">
+
+            <div class="min-w-0">
+              <h1 class="text-xl font-extrabold tracking-tight text-slate-900 truncate">
+                لوحة تحكم المراقبة المباشرة
+              </h1>
+
+              <p class="mt-1 text-xs text-slate-400 font-medium">
+                مراقبة فورية للعلامات الفسيولوجية والنشاط والبيئة المحيطة
+              </p>
             </div>
-            <p class="text-xs text-slate-400 font-medium mr-4">مراقبة حية فورية ومستمرة للعلامات الفسيولوجية والسياق الحركي والبيئي بالثانية (Real-time monitoring)</p>
           </div>
         </header>
 
-        <!-- 2. بطاقة تعريف المريض — sticky داخل المكوّن نفسه، فتلتصق بأعلى main بعد ما الهيدر يمر ويختفي -->
-        <div class="sticky top-0 z-20 px-8 py-2">
-          <PatientHeader 
+
+        <!-- STICKY PATIENT HEADER (حر بالكامل بـ bg-transparent وبادينج صفر ليلتصق بجزء الكروت تحت تماماً) -->
+        <div
+          class="sticky top-0 z-30 px-6 sm:px-7 xl:px-9 pt-0 pb-0 bg-transparent"
+        >
+          <PatientHeader
             :patient="store.currentPatient"
             :is-ws-connected="alertsStore.isWsConnected"
             :just-updated="alertsStore.justUpdated"
@@ -55,143 +59,421 @@
           />
         </div>
 
-        <!-- شبكة العناصر الحيوية والمخططات والتحليلات -->
-        <div class="px-8 py-4 space-y-6 w-full">
 
-        <!-- شبكة المؤشرات الحيوية الرئيسيّة -->
-        <section class="grid grid-cols-1 xl:grid-cols-12 gap-6 w-full items-stretch">
-          
-          <!-- الحاوية أ: المؤشرات الفسيولوجية الأساسية (Soft UI Card) -->
-          <div class="xl:col-span-8 bg-white/80 backdrop-blur-xl border border-white/90 rounded-[2rem] p-6 shadow-xl shadow-teal-950/[0.03] flex flex-col justify-between gap-4 hover:shadow-2xl hover:shadow-teal-900/[0.06] transition-all duration-300">
-            <div class="flex items-center justify-between border-b border-slate-100/80 pb-3">
-              <div class="flex items-center gap-2">
-                <div class="w-2 h-2 rounded-full bg-teal-500"></div>
-                <h4 class="text-xs font-black text-teal-900 tracking-wider uppercase">المؤشرات الفسيولوجية الأساسية</h4>
-              </div>
-              <span class="text-[10px] font-bold px-2.5 py-1 rounded-full bg-teal-50 text-teal-700 border border-teal-200/50">تحديث مباشر</span>
-            </div>
-            
-            <div class="flex overflow-x-auto pb-2 lg:pb-0 lg:grid lg:grid-cols-5 gap-3.5 snap-x custom-scrollbar">
-              <!-- 1. نبضات القلب (البطاقة الكلاسيكية) -->
-              <MetricCard :title="$t('heart_rate')" :value="alertsStore.latestReadings.heart_rate ? alertsStore.latestReadings.heart_rate.value + ' bpm' : '-'" :status="hrStatus" icon="heart" />
-              <!-- 2. ضغط الدم الشرياني -->
-              <MetricCard :title="$t('blood_pressure')" :value="bpDisplay || '-'" :status="bpStatus" icon="bp" />
-              <!-- 3. تشبع الأكسجين -->
-              <MetricCard :title="$t('oxygen_saturation')" :value="alertsStore.latestReadings.oxygen ? alertsStore.latestReadings.oxygen.value + '%' : '-'" :status="o2Status" icon="o2" />
-              <!-- 4. معدل التنفس -->
-              <MetricCard :title="$t('respiratory_rate')" :value="alertsStore.latestReadings.respiratory_rate ? alertsStore.latestReadings.respiratory_rate.value + ' rpm' : '-'" :status="rrStatus" icon="cloud" />
-              <!-- 5. درجة حرارة الجسم -->
-              <MetricCard :title="$t('temperature')" :value="alertsStore.latestReadings.temperature ? alertsStore.latestReadings.temperature.value + ' °C' : '-'" :status="tempStatus" icon="fire" />
-            </div>
-          </div>
+        <!-- Dashboard Content -->
+        <div class="px-6 sm:px-7 xl:px-9 mt-6 pb-10 space-y-6">
 
-          <!-- دمج حاوية النشاط والبيئة -->
-          <div class="grid grid-cols-2 gap-4 xl:col-span-4 xl:grid-cols-2 xl:gap-5 items-stretch">
-            
-            <!-- الحاوية ب: النشاط الحركي (البطاقة الكلاسيكية) -->
-            <div class="bg-white/80 backdrop-blur-xl border border-white/90 rounded-[2rem] p-5 shadow-xl shadow-teal-950/[0.03] flex flex-col justify-between gap-3 hover:shadow-2xl hover:shadow-teal-900/[0.06] transition-all duration-300">
-              <div class="flex items-center gap-2 border-b border-slate-100/80 pb-2.5">
-                <div class="w-2 h-2 rounded-full bg-emerald-500"></div>
-                <h4 class="text-xs font-black text-teal-900 tracking-wider uppercase">النشاط الحركي</h4>
+          <!-- ===================================================
+               VITAL SIGNS
+          ==================================================== -->
+          <!-- كارت الأب الفسيولوجي: تلوين نبضي تركماني مضيء بالأطراف + هيدر تركوازي غامق فخم بنسب دائرية كاملة وأيقونة بيضاء منسجمة لليسار -->
+          <section
+            :class="alertsStore.justUpdated 
+              ? 'border-[#0a3d48]/85 ring-1 ring-[#0a3d48]/15 shadow-[0_0_15px_rgba(10,61,72,0.22)]' 
+              : 'border-slate-200 shadow-sm'"
+            class="bg-white rounded-[2rem] border transition-all duration-500 overflow-hidden"
+          >
+            <!-- الترويسة الموحدة بالتركوازي الغامق والأيقونة البيضاء على الطرف المقابل دون إطارات عازلة -->
+            <div class="bg-[#0a3d48] text-white p-5 rounded-t-[2rem] flex items-center justify-between gap-3 select-none">
+              <div class="min-w-0">
+                <h2 class="text-sm font-extrabold text-white leading-tight">
+                  المؤشرات الفسيولوجية
+                </h2>
+                
               </div>
-              <MetricCard :title="$t('activity')" :value="alertsStore.latestReadings.activity_level ? String(alertsStore.latestReadings.activity_level.value) : '-'" :status="activityStatus" icon="bolt" class="w-full" />
+              <Icon icon="solar:heart-pulse-bold" class="w-6 h-6 text-white shrink-0" />
             </div>
 
-            <!-- الحاوية ج: السياق البيئي -->
-            <div class="bg-white/80 backdrop-blur-xl border border-white/90 rounded-[2rem] p-5 shadow-xl shadow-teal-950/[0.03] flex flex-col justify-between gap-3 hover:shadow-2xl hover:shadow-teal-900/[0.06] transition-all duration-300">
-              <div class="flex items-center gap-2 border-b border-slate-100/80 pb-2.5">
-                <div class="w-2 h-2 rounded-full bg-cyan-500"></div>
-                <h4 class="text-xs font-black text-teal-900 tracking-wider uppercase">السياق البيئي</h4>
+            <div class="p-5 sm:p-6">
+              <!-- شريط التمرير الأفقي الذكي للموبايل والشبكة الخماسية للكمبيوتر -->
+              <div class="flex overflow-x-auto gap-3 pb-3 snap-x xl:grid xl:grid-cols-5 xl:gap-3 xl:pb-0 custom-scrollbar scroll-smooth">
+
+                <MetricCard
+                  class="snap-start shrink-0 min-w-[145px] xl:min-w-0"
+                  :title="$t('heart_rate')"
+                  :value="
+                    alertsStore.latestReadings.heart_rate
+                      ? alertsStore.latestReadings.heart_rate.value + ' bpm'
+                      : '-'
+                  "
+                  :status="hrStatus"
+                  icon="heart"
+                  :min-val="alertsStore.latestReadings.heart_rate?.min_val"
+                  :max-val="alertsStore.latestReadings.heart_rate?.max_val"
+                />
+
+                <MetricCard
+                  class="snap-start shrink-0 min-w-[145px] xl:min-w-0"
+                  :title="$t('blood_pressure')"
+                  :value="bpDisplay || '-'"
+                  :status="bpStatus"
+                  icon="bp"
+                  :min-val="alertsStore.latestReadings.heart_rate?.min_val"
+                  :max-val="alertsStore.latestReadings.heart_rate?.max_val"
+                />
+
+                <MetricCard
+                  class="snap-start shrink-0 min-w-[145px] xl:min-w-0"
+                  :title="$t('oxygen_saturation')"
+                  :value="
+                    alertsStore.latestReadings.oxygen
+                      ? alertsStore.latestReadings.oxygen.value + '%'
+                      : '-'
+                  "
+                  :status="o2Status"
+                  icon="o2"
+                  :min-val="alertsStore.latestReadings.oxygen?.min_val"
+                  :max-val="alertsStore.latestReadings.oxygen?.max_val"
+                />
+
+                <MetricCard
+                  class="snap-start shrink-0 min-w-[145px] xl:min-w-0"
+                  :title="$t('respiratory_rate')"
+                  :value="
+                    alertsStore.latestReadings.respiratory_rate
+                      ? alertsStore.latestReadings.respiratory_rate.value + ' rpm'
+                      : '-'
+                  "
+                  :status="rrStatus"
+                  icon="cloud"
+                  :min-val="alertsStore.latestReadings.respiratory_rate?.min_val"
+                  :max-val="alertsStore.latestReadings.respiratory_rate?.max_val"
+                />
+
+                <MetricCard
+                  class="snap-start shrink-0 min-w-[145px] xl:min-w-0"
+                  :title="$t('temperature')"
+                  :value="
+                    alertsStore.latestReadings.temperature
+                      ? alertsStore.latestReadings.temperature.value + ' °C'
+                      : '-'
+                  "
+                  :status="tempStatus"
+                  icon="fire"
+                  :min-val="alertsStore.latestReadings.temperature?.min_val"
+                  :max-val="alertsStore.latestReadings.temperature?.max_val"
+                />
+
               </div>
-              <MetricCard :title="$t('room_temperature')" :value="alertsStore.latestReadings.room_temperature ? alertsStore.latestReadings.room_temperature.value + ' °C' : '-'" :status="roomTempStatus" icon="home" class="w-full" />
+            </div>
+          </section>
+
+
+          <!-- ===================================================
+               ACTIVITY + ENVIRONMENT
+          ==================================================== -->
+          <section class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+
+            <!-- Activity -->
+            <!-- كارت الأب الحركي: تلوين نبضي تركماني مضيء بالأطراف + هيدر تركوازي غامق فخم بنسب دائرية كاملة وأيقونة بيضاء منسجمة لليسار -->
+            <article
+              :class="alertsStore.justUpdated 
+                ? 'border-[#0a3d48]/85 ring-1 ring-[#0a3d48]/15 shadow-[0_0_15px_rgba(10,61,72,0.22)]' 
+                : 'border-slate-200 shadow-sm'"
+              class="bg-white rounded-[2rem] border flex flex-col transition-all duration-500 overflow-hidden"
+            >
+              <!-- الترويسة الموحدة بالتركوازي الغامق والأيقونة البيضاء على الطرف المقابل دون إطارات عازلة -->
+              <div class="bg-[#0a3d48] text-white p-5 rounded-t-[2rem] flex items-center justify-between gap-3 select-none">
+                <div class="min-w-0">
+                  <h3 class="text-sm font-extrabold text-white leading-tight">
+                    النشاط الحركي
+                  </h3>
+                  <p class="text-[10px] text-teal-200/60 mt-0.5 font-medium">
+                    الوضعية الحالية للمريض
+                  </p>
+                </div>
+                <Icon icon="solar:running-2-bold" class="w-6 h-6 text-white shrink-0" />
+              </div>
+
+              <div class="p-5 sm:p-6 pt-5 flex items-center gap-5 flex-1 select-none">
+                <div
+                  class="w-16 h-16 shrink-0 rounded-2xl bg-emerald-50 border border-emerald-100 text-emerald-700 flex items-center justify-center shadow-inner"
+                >
+                  <Icon :icon="activityIcon" class="w-9 h-9" />
+                </div>
+
+                <div class="min-w-0">
+                  <span class="block text-[10px] text-slate-400 font-semibold">
+                    الوضعية الحركية
+                  </span>
+
+                  <strong class="block text-xl font-extrabold text-slate-900 mt-1 truncate">
+                    {{ activityLabel }}
+                  </strong>
+
+                  <span class="flex items-center gap-1.5 mt-2 text-[9px] text-slate-400 font-medium">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                    يتم التحديث تلقائياً
+                  </span>
+                </div>
+              </div>
+            </article>
+
+
+            <!-- Environment -->
+            <!-- كارت الأب البيئي: تلوين نبضي تركماني مضيء بالأطراف + هيدر تركوازي غامق فخم بنسب دائرية كاملة وأيقونة بيضاء منسجمة لليسار -->
+            <article
+              :class="alertsStore.justUpdated 
+                ? 'border-[#0a3d48]/85 ring-1 ring-[#0a3d48]/15 shadow-[0_0_15px_rgba(10,61,72,0.22)]' 
+                : 'border-slate-200 shadow-sm'"
+              class="bg-white rounded-[2rem] border flex flex-col transition-all duration-500 overflow-hidden"
+            >
+              <!-- الترويسة الموحدة بالتركوازي الغامق والأيقونة البيضاء على الطرف المقابل دون إطارات عازلة -->
+              <div class="bg-[#0a3d48] text-white p-5 rounded-t-[2rem] flex items-center justify-between gap-3 select-none">
+                <div class="min-w-0">
+                  <h3 class="text-sm font-extrabold text-white leading-tight">
+                    البيئة المحيطة
+                  </h3>
+                  <p class="text-[10px] text-teal-200/60 mt-0.5 font-medium">
+                    السياق البيئي للمريض
+                  </p>
+                </div>
+                <Icon icon="solar:temperature-bold" class="w-6 h-6 text-white shrink-0" />
+              </div>
+
+              <div class="p-5 sm:p-6 pt-5 flex items-center gap-5 flex-1 select-none">
+                <div
+                  class="w-16 h-16 shrink-0 rounded-2xl bg-cyan-50 border border-cyan-100 text-cyan-700 flex items-center justify-center shadow-inner"
+                >
+                  <Icon icon="solar:temperature-bold" class="w-9 h-9" />
+                </div>
+
+                <div class="min-w-0">
+                  <span class="block text-[10px] text-slate-400 font-semibold">
+                    درجة حرارة الغرفة
+                  </span>
+
+                  <strong class="block text-xl font-extrabold text-slate-900 mt-1 truncate font-mono">
+                    {{
+                      alertsStore.latestReadings.room_temperature
+                        ? alertsStore.latestReadings.room_temperature.value + ' °C'
+                        : '-'
+                    }}
+                  </strong>
+
+                  <span class="flex items-center gap-1.5 mt-2 text-[9px] text-slate-400 font-medium">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                    البيئة مستقرة
+                  </span>
+                </div>
+              </div>
+            </article>
+
+          </section>
+
+
+          <!-- ===================================================
+               ANALYTICS
+          ==================================================== -->
+          <section class="grid grid-cols-1 xl:grid-cols-3 gap-5 items-stretch">
+
+            <!-- Trend Chart -->
+            <!-- كارت المخططات: تلوين نبضي تركماني مضيء بالأطراف + هيدر تركوازي غامق فخم بنسب دائرية كاملة وأيقونة بيضاء منسجمة لليسار -->
+            <div
+              :class="alertsStore.justUpdated 
+                ? 'border-[#0a3d48]/85 ring-1 ring-[#0a3d48]/15 shadow-[0_0_15px_rgba(10,61,72,0.22)]' 
+                : 'border-slate-200 shadow-sm'"
+              class="xl:col-span-2 min-w-0 bg-white rounded-[2rem] border flex flex-col transition-all duration-500 overflow-hidden"
+            >
+              <!-- ترويسة المخططات بالتركوازي الغامق والأيقونة البيضاء على اليسار المقابل بجانب مفاتيح الرسم الشرياني -->
+              <div class="bg-[#0a3d48] text-white p-5 rounded-t-[2rem] flex items-center justify-between gap-3 select-none">
+                <div class="min-w-0">
+                  <h2 class="text-sm font-extrabold text-white leading-tight">
+                    الاتجاهات الفسيولوجية
+                  </h2>
+                  <p class="text-[10px] text-teal-200/60 mt-0.5 font-medium">
+                    تطور المؤشرات الصحية بمرور الوقت
+                  </p>
+                </div>
+
+                <div class="flex items-center gap-4">
+                  <div class="flex items-center gap-3 text-[9px] font-bold shrink-0">
+                    <span class="flex items-center gap-1.5 text-rose-300">
+                      <span class="w-3 h-0.5 rounded-full bg-rose-500"></span>
+                      معدل ضربات القلب
+                    </span>
+                    <span class="flex items-center gap-1.5 text-sky-300">
+                      <span class="w-3 h-0.5 rounded-full bg-sky-400"></span>
+                      ضغط الدم
+                    </span>
+                  </div>
+                  <Icon icon="solar:chart-2-bold" class="w-6 h-6 text-white shrink-0" />
+                </div>
+              </div>
+
+              <div class="p-5 sm:p-6 flex-1 min-h-0">
+                <TrendChart
+                  :readings="alertsStore.readings"
+                  :latest="alertsStore.latestReadings"
+                />
+              </div>
             </div>
 
-          </div>
 
-        </section>
-
-        <!-- المخططات والتحليلات الطبية -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start w-full">
-          
-          <!-- مخطط الاتجاهات الطبية العصري -->
-          <div class="lg:col-span-2 order-2 lg:order-1 bg-white/80 backdrop-blur-xl rounded-[2rem] border border-white/90 p-6 shadow-xl shadow-teal-950/[0.03] hover:shadow-2xl hover:shadow-teal-900/[0.06] transition-all duration-300">
-            <div class="flex items-center justify-between mb-5 border-b border-slate-100 pb-3.5">
-              <div class="flex items-center gap-2">
-                <div class="w-2.5 h-2.5 rounded-full bg-teal-600"></div>
-                <h3 class="text-xs font-black text-teal-950 tracking-wide uppercase">مخططات الاتجاه الفسيولوجي المتقدمة</h3>
-              </div>
-              <div class="flex items-center gap-4 text-[11px] font-bold">
-                <span class="flex items-center gap-2 bg-rose-50 text-rose-700 px-2.5 py-1 rounded-full border border-rose-100">
-                  <span class="w-2 h-2 bg-rose-500 rounded-full shadow-sm"></span>نبضات القلب
-                </span>
-                <span class="flex items-center gap-2 bg-sky-50 text-sky-700 px-2.5 py-1 rounded-full border border-sky-100">
-                  <span class="w-2 h-2 bg-sky-500 rounded-full shadow-sm"></span>الضغط الانقباضي
-                </span>
-              </div>
+            <!-- AI Insight -->
+            <div class="min-w-0 flex flex-col">
+              <InsightPanel
+                :insight="alertsStore.latestInsight"
+              />
             </div>
-            <TrendChart :readings="alertsStore.readings" :latest="alertsStore.latestReadings" />
-          </div>
 
-          <!-- مكون التنبؤ المستقل للذكاء الاصطناعي -->
-          <InsightPanel class="lg:col-span-1 order-1 lg:order-2" :insight="alertsStore.latestInsight" />
+          </section>
 
-        </div>
 
-        <!-- لوحة التحكم المركزية بالسيناريوهات الطبية - بدون غلاف أبيض -->
-        <section class="w-full">
-          <SensorControl :patient-id="store.currentPatient.id" />
-        </section>
+          <!-- ===================================================
+               SENSOR CONTROL (حراً بلا حدود بيضاء أو حشر بصري أو عبارات مكررة)
+          ==================================================== -->
+          <section class="w-full">
+            <SensorControl
+              :patient-id="store.currentPatient.id"
+            />
+          </section>
 
         </div>
       </main>
     </div>
-
   </div>
 </template>
+
 
 <script setup>
 import { ref, computed } from 'vue'
 import { usePatientStore } from '../stores/patient'
 import { useAlertsStore } from '../stores/alerts'
+
 import MetricCard from '../components/MetricCard.vue'
 import TrendChart from '../components/TrendChart.vue'
 import SensorControl from '../components/SensorControl.vue'
 import InsightPanel from '../components/insightPanel.vue'
 import PatientHeader from '../components/PatientHeader.vue'
 
+import { Icon } from '@iconify/vue'
+
+
 const store = usePatientStore()
 const alertsStore = useAlertsStore()
+
 
 const selectedRange = ref('1h')
 const showCustomRange = ref(false)
 
+
 const selectChartRange = (range) => {
   selectedRange.value = range
   showCustomRange.value = range === 'custom'
+
   if (range !== 'custom' && store.currentPatient?.id) {
     alertsStore.readings = []
-    alertsStore.fetchChartData(store.currentPatient.id, range)
+    alertsStore.fetchChartData(
+      store.currentPatient.id,
+      range
+    )
   }
 }
 
-// تلوين البطاقات الفوري بقراءة الـ status من الـ AlertsStore المشترك مباشرة
-const hrStatus = computed(() => alertsStore.latestReadings.heart_rate?.status || 'Good')
-const o2Status = computed(() => alertsStore.latestReadings.oxygen?.status || 'Good')
-const activityStatus = computed(() => 'Good')
-const tempStatus = computed(() => alertsStore.latestReadings.temperature?.status || 'Good')
-const rrStatus = computed(() => alertsStore.latestReadings.respiratory_rate?.status || 'Good')
-const roomTempStatus = computed(() => alertsStore.latestReadings.room_temperature?.status || 'Good')
 
-const bpStatus = computed(() => {
-  const sysS = alertsStore.latestReadings.bp_sys?.status || 'Good'
-  const diaS = alertsStore.latestReadings.bp_dia?.status || 'Good'
-  return (sysS === 'Caution' || diaS === 'Caution') ? 'Caution' : 'Good'
+const activityLabel = computed(() => {
+  const val = alertsStore.latestReadings.activity_level?.value
+
+  if (val === undefined || val === null) {
+    return 'غير معروف'
+  }
+
+  const num = Number(val)
+
+  if (num === 0) return 'نوم / سكون'
+  if (num === 1) return 'جلوس'
+  if (num === 2) return 'مشي'
+  if (num === 3) return 'جري'
+
+  return 'غير معروف'
 })
 
+
+const activityIcon = computed(() => {
+  const val = alertsStore.latestReadings.activity_level?.value
+
+  if (val === undefined || val === null) {
+    return 'solar:user-bold'
+  }
+
+  const num = Number(val)
+
+  if (num === 0) return 'solar:sleeping-bold'
+  if (num === 1) return 'solar:armchair-bold'
+  if (num === 2) return 'solar:walking-round-bold'
+  if (num === 3) return 'solar:running-round-bold'
+
+  return 'solar:user-bold'
+})
+
+
+const hrStatus = computed(() =>
+  alertsStore.latestReadings.heart_rate?.status || 'Good'
+)
+
+const o2Status = computed(() =>
+  alertsStore.latestReadings.oxygen?.status || 'Good'
+)
+
+const activityStatus = computed(() => 'Good')
+
+const tempStatus = computed(() =>
+  alertsStore.latestReadings.temperature?.status || 'Good'
+)
+
+const rrStatus = computed(() =>
+  alertsStore.latestReadings.respiratory_rate?.status || 'Good'
+)
+
+const roomTempStatus = computed(() =>
+  alertsStore.latestReadings.room_temperature?.status || 'Good'
+)
+
+
+const bpStatus = computed(() => {
+  const sysS =
+    alertsStore.latestReadings.bp_sys?.status || 'Good'
+
+  const diaS =
+    alertsStore.latestReadings.bp_dia?.status || 'Good'
+
+  return (
+    sysS === 'Caution' ||
+    diaS === 'Caution'
+  )
+    ? 'Caution'
+    : 'Good'
+})
+
+
 const bpDisplay = computed(() => {
-  if (alertsStore.latestReadings.bp_sys?.value && alertsStore.latestReadings.bp_dia?.value) {
+  if (
+    alertsStore.latestReadings.bp_sys?.value &&
+    alertsStore.latestReadings.bp_dia?.value
+  ) {
     return `${alertsStore.latestReadings.bp_sys.value}/${alertsStore.latestReadings.bp_dia.value}`
   }
+
   return null
 })
 </script>
+
+<style scoped>
+.custom-scrollbar {
+  scrollbar-width: thin;
+}
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #0d9488;
+}
+</style>

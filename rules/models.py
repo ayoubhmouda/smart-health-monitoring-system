@@ -1,3 +1,4 @@
+# rules/models.py
 from django.db import models
 from reasoning.models import Insight
 
@@ -34,6 +35,15 @@ class Rule(models.Model):
         related_name='custom_rules'
     )
     is_active = models.BooleanField(default=True)
+
+    # 🟢 علاقة ManyToMany ذاتية الربط وصريحة لتجاوز وإلغاء القوانين العامة المحددة
+    overridden_rules = models.ManyToManyField(
+        'self',
+        blank=True,
+        symmetrical=False,
+        related_name='overriding_rules',
+        help_text="البروتوكولات السريرية العامة التي يتم إلغاؤها واستبدالها بهذه القاعدة المخصصة للمريض"
+    )
 
     def __str__(self):
         return f"{self.name} ({self.get_severity_display()})"

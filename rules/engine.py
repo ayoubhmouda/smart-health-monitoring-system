@@ -12,18 +12,26 @@ logger = logging.getLogger(__name__)
 def evaluate_direct_rules(monitored_element, context_history) -> list:
     """
     تقييم القواعد المخصصة والعامة مباشرة من السياق وتوليد كائنات Insight لها إذا تطابقت الشروط
-    مع دمج صمام الاستدامة الزمنية الثنائي (المخصص للحساس أو الافتراضي للقاعدة).
+    مع استبعاد ذكي وموجه للبروتوكولات العامة الملغاة صراحة من الطبيب لهذا المريض.
     """
-    active_rules = Rule.objects.filter(is_active=True)
-    triggered_insights = []
+    # 🟢 1. جلب القواعد الخاصة والمفعلة للمريض الحالي تحديداً
+    patient_rules = Rule.objects.filter(monitored_element_id=monitored_element.id, is_active=True)
 
+    # 🟢 2. استخلاص مصفوفة المعرفات للقوانين العامة الملغاة من القواعد المخصصة
+    overridden_ids = set()
+    for rule in patient_rules:
+        overridden_ids.update(rule.overridden_rules.values_list('id', flat=True))
+
+    # 🟢 3. جلب القوانين العامة للمستشفى واستبعاد المعرفات الملغاة
+    global_rules = Rule.objects.filter(monitored_element__isnull=True, is_active=True).exclude(id__in=overridden_ids)
+
+    # 🟢 4. دمج وتصفية القوانين الحية النشطة التي يجب تقييمها
+    active_rules = list(patient_rules) + list(global_rules)
+    
+    triggered_insights = []
     engine = RuleEngine()
 
     for rule in active_rules:
-        # صمام أمان لمرضى العنبر
-        if rule.monitored_element and rule.monitored_element_id != monitored_element.id:
-            continue
-
         # تقييم القاعدة بالاستعانة بفلتر الاستدامة السريري الزمني المطور
         is_triggered = engine.evaluate_rule_temporally(rule, monitored_element, context_history)
 
@@ -66,9 +74,10 @@ class RuleEngine:
         'room_temperature': ('environmental_data', 'room_temperature'),
     }
 
-    def evaluate_rule_temporally(self, rule, monitored_element, latest_history) -> bool:
+    # 🟢 تعديل التوقيع لقبول كائن الـ insight وتمريره لتقييم سمات الذكاء الاصطناعي
+    def evaluate_rule_temporally(self, rule, monitored_element, latest_history, insight=None) -> bool:
         """
-        تقيم شروط القاعدة بالكامل مع دعم التخصيص الثنائي:
+        تقيم شروط القاعدة بالكامل مع دعم التخصيص الثنائي وتمرير مرجع الذكاء الاصطناعي:
         تفحص مهلة الاستدامة المخصصة لكل حساس على حدة، وإذا لم توجد تعود للمهلة الافتراضية للقاعدة.
         """
         rule_data = rule.condition or {}
@@ -81,15 +90,15 @@ class RuleEngine:
 
         # تقييم الشرط الأول زمنياً
         is_triggered = self._evaluate_single_condition_temporally(
-            conditions[0], monitored_element, latest_history, global_duration
+            conditions[0], monitored_element, latest_history, global_duration, insight
         )
 
-        # تقييم بقية الشروط التراكمية (AND / OR) مع احترام التخصيص الزمني لكل حساس
+        # تقييم بقية الشروط التراكمية (AND / OR) مع احترام التخصيص الزمني لكل حساس ومرجع الـ Insight
         for i in range(1, len(conditions)):
             cond = conditions[i]
             connector = cond.get('connector', 'AND')
             res = self._evaluate_single_condition_temporally(
-                cond, monitored_element, latest_history, global_duration
+                cond, monitored_element, latest_history, global_duration, insight
             )
 
             if connector == 'OR':
@@ -99,15 +108,24 @@ class RuleEngine:
                 
         return is_triggered
 
-    def _evaluate_single_condition_temporally(self, cond, monitored_element, latest_history, global_duration) -> bool:
+    # 🟢 استقبال كائن الـ insight كمرجع للتقييم الفوري لسمات الذكاء الاصطناعي
+    def _evaluate_single_condition_temporally(self, cond, monitored_element, latest_history, global_duration, insight=None) -> bool:
         """تقييم شرط فردي واحد على نافذة زمنية مخصصة له تحديداً لاستبعاد الشوائب"""
+        field = cond.get('field')
+        formatted_field = str(field).lower().replace(' ', '_') if field else ''
+
+        # 🟢 صمام الأمان المطور: إذا كان الفحص يخص سمات الذكاء الاصطناعي (مثل الخطورة أو المصدر)،
+        # نقيمه فوراً وبشكل لحظي (0 ثانية تأخير) على كائن التنبؤ الحالي، لأن التاريخ السياقي للحساسات لا يحتوي على هذه السمات!
+        if formatted_field in ['insight_type', 'severity', 'source']:
+            return self._evaluate_condition(cond, insight, latest_history.context)
+
         cond_duration = cond.get('duration_seconds')
         if cond_duration is None:
             cond_duration = global_duration
 
         if not cond_duration or int(cond_duration) <= 0:
             # تقييم فوري مباشر
-            return self._evaluate_condition(cond, None, latest_history.context)
+            return self._evaluate_condition(cond, insight, latest_history.context)
 
         # سحب النافذة الزمنية المخصصة لهذا الحساس تحديداً تحويلاً إلى قائمة
         start_time = latest_history.recorded_at - timedelta(seconds=int(cond_duration))
@@ -121,13 +139,11 @@ class RuleEngine:
         if not historical_records:
             return False
 
-        # 🟢 صمام الأمان الرياضي لحل مشكلة الـ Cold Start:
-        # نحسب الفارق الزمني الفعلي المتوفر بين أقدم وأحدث سجل في الكويري
+        # صمام الأمان الرياضي لحل مشكلة الـ Cold Start
         oldest_record_time = historical_records[0].recorded_at
         newest_record_time = historical_records[-1].recorded_at
         actual_span_seconds = (newest_record_time - oldest_record_time).total_seconds()
 
-        # إذا كانت المدة الزمنية المتوفرة في الداتابيز أقل من المدة المطلوبة للشرط (مع سماح مرونة 5 ثوانٍ)، نكتم التنبيه فوراً!
         if actual_span_seconds < (int(cond_duration) - 5):
             print(f"⏱️ [RuleEngine] كتم التنبيه لـ Patient #{monitored_element.id} مؤقتاً: المتوفر {actual_span_seconds}ث، والمطلوب {cond_duration}ث.")
             return False
@@ -136,7 +152,7 @@ class RuleEngine:
         for hist_h in historical_records:
             if not hist_h.context:
                 return False
-            if not self._evaluate_condition(cond, None, hist_h.context):
+            if not self._evaluate_condition(cond, insight, hist_h.context):
                 return False
                 
         return True
@@ -155,7 +171,8 @@ class RuleEngine:
             category_data = getattr(context, category, {}) or {}
             current_val = category_data.get(sub_key)
         elif formatted_field in ['insight_type', 'severity', 'source']:
-            current_val = getattr(insight, formatted_field, None)
+            # 🟢 قراءة ميزات كائن التنبؤ بالذكاء الاصطناعي الحالي بأمان دون انهيار
+            current_val = getattr(insight, formatted_field, None) if insight else None
 
         if current_val is None:
             return False
@@ -197,7 +214,8 @@ class RuleEngine:
             if rule.monitored_element and rule.monitored_element_id != insight.monitored_element_id:
                 continue
 
-            is_triggered = self.evaluate_rule_temporally(rule, insight.monitored_element, context_history)
+            # 🟢 مررنا الـ insight هنا كمعامل رابع ليتم تقييم سمات الذكاء الاصطناعي بنجاح
+            is_triggered = self.evaluate_rule_temporally(rule, insight.monitored_element, context_history, insight)
 
             if is_triggered:
                 action_template = rule.action_template or "notify_doctor_immediately"

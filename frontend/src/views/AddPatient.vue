@@ -2,48 +2,56 @@
 <template>
   <div class="w-full min-h-screen bg-[#F0F6F5] text-slate-600 font-sans antialiased p-6 flex flex-col gap-6" dir="rtl">
     
-    <!-- هيدر الشاشة البارز وأزرار الحفظ والإلغاء المباشرة -->
-    <header class="w-full bg-white rounded-3xl border border-slate-200/80 p-6 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4 select-none">
-      <div>
-        <div class="flex items-center gap-2 mb-1">
-          <span class="text-xs text-teal-600 font-mono font-extrabold uppercase tracking-wider">لوحة إسكان المرضى</span>
-          <span class="text-xs bg-teal-50 text-teal-700 px-2.5 py-0.5 rounded-full font-bold">تسجيل ملف جديد</span>
+    <!-- 🟢 الترويسة العلوية باللون التركوازي -->
+    <header class="w-full rounded-3xl p-6 shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-gradient-to-b from-[#0a3d48] via-[#0e4f5e] to-[#08323c] text-white select-none shrink-0">
+      <div class="flex items-center gap-3">
+        <!-- الأيقونة حرة بالكامل بدون صندوق وحاوية باللون الأبيض الناصع -->
+        <Icon icon="solar:user-plus-bold" class="w-8 h-8 text-white shrink-0" />
+        
+        <div>
+          <div class="flex items-center gap-2 mb-1.5">
+            <span class="text-xs text-teal-300 font-mono font-extrabold uppercase tracking-wider">لوحة إسكان المرضى</span>
+            <span class="text-[10px] bg-white/10 text-teal-200 px-2.5 py-0.5 rounded-full font-bold">تسجيل ملف جديد</span>
+          </div>
+          <h1 class="text-xl md:text-2xl font-extrabold text-white tracking-tight">تسجيل وإسكان مريض جديد بالمنظومة</h1>
+          <p class="text-xs text-teal-200/70 mt-1 font-medium">تأسيس الملف الديموغرافي، السجل الطبي السريري، وربط أو إنشاء حساب مقدم الرعاية للمريض</p>
         </div>
-        <h1 class="text-2xl font-extrabold text-slate-800 tracking-tight">تسجيل وإسكان مريض جديد بالمنظومة</h1>
-        <p class="text-xs text-slate-400 mt-1">تأسيس الملف الديموغرافي، السجل الطبي السريري، وربط أو إنشاء حساب مقدم الرعاية للمريض</p>
       </div>
 
-      <!-- أزرار الإلغاء والحفظ المباشرة للشاشة الكاملة -->
-      <div class="flex items-center gap-3">
+      <!-- الأزرار نصوص باللون الأبيض فقط بدون أي خلفيات أو مربعات -->
+      <div class="flex items-center gap-6 w-full sm:w-auto justify-end select-none">
         <button 
           @click="discardChanges" 
-          class="px-5 py-2.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-500 font-bold text-xs transition-all shadow-xs"
+          class="text-white hover:text-teal-200 font-bold text-xs transition-colors cursor-pointer bg-transparent p-0 border-0 outline-none"
         >
           إلغاء وتراجع
         </button>
         <button 
           @click="submitPatientForm" 
-          class="bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs px-6 py-2.5 rounded-xl shadow-sm hover:shadow transition-all"
+          class="text-white hover:text-teal-200 font-bold text-xs transition-colors cursor-pointer bg-transparent p-0 border-0 outline-none"
         >
           حفظ وتسجيل المريض
         </button>
       </div>
     </header>
 
-    <!-- الأقسام الثلاثة اللوجستية الموزعة بوضوح وتباين عالٍ -->
+    <!-- الأقسام الثلاثة اللوجستية الموزعة بوضوح وتباين عالٍ متجاوب -->
     <main class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch w-full">
       
       <!-- القسم الأول والثاني في بطاقات مستقلة متجاورة -->
       <div class="lg:col-span-8 flex flex-col gap-6">
         
-        <!-- 1. البيانات الشخصية والديموغرافية الأساسية للمريض -->
-        <div class="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-sm space-y-4">
-          <h4 class="font-extrabold text-slate-800 text-xs flex items-center gap-2">
-            <span class="w-5 h-5 bg-teal-50 text-teal-700 font-bold rounded-lg flex items-center justify-center border border-teal-100 font-mono">1</span>
-            <span>البيانات الشخصية والديموغرافية الأساسية للمريض</span>
-          </h4>
+        <!-- 🟢 1. البيانات الشخصية والديموغرافية الأساسية للمريض -->
+        <div class="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden flex flex-col">
+          <div class="bg-[#0a3d48] text-white p-4.5 rounded-t-3xl flex items-center justify-between gap-3 select-none">
+            <div class="flex items-center gap-2">
+              <span class="text-teal-300 font-mono font-bold text-sm select-none">1.</span>
+              <span class="font-extrabold text-white text-xs">البيانات الشخصية والديموغرافية الأساسية للمريض</span>
+            </div>
+            <Icon icon="solar:user-bold" class="w-5 h-5 text-white shrink-0" />
+          </div>
 
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+          <div class="p-6 grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
             <div>
               <label class="block text-sm font-bold text-slate-700 mb-1.5">الاسم الكامل للمريض <span class="text-rose-500">*</span></label>
               <input 
@@ -84,20 +92,23 @@
           </div>
         </div>
 
-        <!-- 2. التاريخ الطبي والأمراض المزمنة للمريض -->
-        <div class="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-sm space-y-4">
-          <h4 class="font-extrabold text-slate-800 text-xs flex items-center gap-2">
-            <span class="w-5 h-5 bg-teal-50 text-teal-700 font-bold rounded-lg flex items-center justify-center border border-teal-100 font-mono">2</span>
-            <span>التاريخ الطبي والمزمن الفعلي للمريض (MIMIC Co-morbidities)</span>
-          </h4>
+        <!-- 🟢 2. التاريخ الطبي والأمراض المزمنة للمريض -->
+        <div class="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden flex flex-col"> 
+          <div class="bg-[#0a3d48] text-white p-4.5 rounded-t-3xl flex items-center justify-between gap-3 select-none">
+            <div class="flex items-center gap-2">
+              <span class="text-teal-300 font-mono font-bold text-sm select-none">2.</span>
+              <span class="font-extrabold text-white text-xs">التاريخ الطبي والمزمن الفعلي للمريض (MIMIC Co-morbidities)</span>
+            </div>
+            <Icon icon="solar:notes-bold" class="w-5 h-5 text-white shrink-0" />
+          </div>
 
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div class="p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
             <!-- خيار أمراض القلب -->
             <label class="flex items-start gap-3 bg-slate-50/50 p-4 border border-slate-200 rounded-2xl cursor-pointer hover:bg-slate-50 transition-colors">
               <input 
                 type="checkbox" 
                 v-model="medicalHistoryFlags.heart_disease" 
-                class="rounded text-teal-600 focus:ring-teal-500/50 w-4 h-4 mt-0.5" 
+                class="rounded text-teal-600 focus:ring-teal-500/50 w-4 h-4 mt-0.5 cursor-pointer" 
               />
               <div>
                 <p class="text-sm font-bold text-slate-750">التاريخ المرضي لأمراض القلب (Heart Disease)</p>
@@ -110,7 +121,7 @@
               <input 
                 type="checkbox" 
                 v-model="medicalHistoryFlags.chronic_conditions" 
-                class="rounded text-teal-600 focus:ring-teal-500/50 w-4 h-4 mt-0.5" 
+                class="rounded text-teal-600 focus:ring-teal-500/50 w-4 h-4 mt-0.5 cursor-pointer" 
               />
               <div>
                 <p class="text-sm font-bold text-slate-750">الإصابة بأمراض مزمنة عامة (Chronic Conditions)</p>
@@ -122,18 +133,21 @@
 
       </div>
 
-      <!-- العمود الأيسر: 3. إسناد أو إنشاء حساب مقدم الرعاية (محدث به رقم الهاتف بدلاً من البريد الإلكتروني) -->
-      <div class="lg:col-span-4 bg-white rounded-3xl border border-slate-200/80 p-6 shadow-sm flex flex-col justify-between gap-5">
-        <div class="space-y-4">
-          <h4 class="font-extrabold text-slate-800 text-xs flex items-center gap-2">
-            <span class="w-5 h-5 bg-teal-50 text-teal-700 font-bold rounded-lg flex items-center justify-center border border-teal-100 font-mono">3</span>
-            <span>إسناد وإدارة مقدم الرعاية (Caregiver)</span>
-          </h4>
+      <!-- العمود الأيسر: 🟢 3. إسناد وإدارة مقدم الرعاية -->
+      <div class="lg:col-span-4 bg-white rounded-3xl border border-slate-200/80 shadow-sm flex flex-col justify-between overflow-hidden gap-0">
+        <div class="bg-[#0a3d48] text-white p-4.5 rounded-t-3xl flex items-center justify-between gap-3 select-none shrink-0">
+          <div class="flex items-center gap-2">
+            <span class="text-teal-300 font-mono font-bold text-sm select-none">3.</span>
+            <span class="font-extrabold text-white text-xs">إسناد وإدارة مقدم الرعاية (Caregiver)</span>
+          </div>
+          <Icon icon="solar:users-group-rounded-bold" class="w-5 h-5 text-white shrink-0" />
+        </div>
 
-          <div class="space-y-4 text-xs">
+        <div class="p-6 space-y-4 text-xs flex-1 flex flex-col justify-between gap-5">
+          <div class="space-y-4">
             <div>
               <label class="block text-sm font-bold text-slate-700 mb-1.5">خيارات إشراك مقدم الرعاية</label>
-              <select v-model="form.caregiver_option" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 outline-none font-bold text-slate-900">
+              <select v-model="form.caregiver_option" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 outline-none font-bold text-slate-900 cursor-pointer">
                 <option value="none">بدون مقدم رعاية حالياً</option>
                 <option value="existing">اختيار مقدم رعاية مسجّل مسبقاً</option>
                 <option value="new">إنشاء حساب جديد كلياً لمقدم الرعاية</option>
@@ -142,15 +156,15 @@
 
             <!-- أ. في حال اختيار مقدم رعاية مسجل مسبقاً -->
             <div v-if="form.caregiver_option === 'existing'" class="p-3 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
-              <label class="block font-bold text-slate-650">اختر مقدم الرعاية من قائمة المستشفى</label>
-              <select v-model="form.existing_caregiver_id" class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 outline-none font-bold text-slate-900">
+              <label class="block font-bold text-slate-65">اختر مقدم الرعاية من قائمة المستشفى</label>
+              <select v-model="form.existing_caregiver_id" class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 outline-none font-bold text-slate-900 cursor-pointer">
                 <option v-for="care in caregivers" :key="care.id" :value="care.id">
                   {{ care.full_name }}
                 </option>
               </select>
             </div>
 
-            <!-- ب. في حال إنشاء حساب جديد لمقدم الرعاية (محدث برقم الهاتف) -->
+            <!-- ب. في حال إنشاء حساب جديد لمقدم الرعاية -->
             <div v-if="form.caregiver_option === 'new'" class="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-3">
               <p class="font-bold text-slate-750 border-b border-slate-200/60 pb-1.5">بيانات الحساب الجديد لمقدم الرعاية:</p>
               
@@ -165,7 +179,6 @@
                   <input v-model="form.caregiver_username" type="text" required placeholder="fatima_f" class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 focus:border-teal-500 outline-none font-bold text-slate-900 placeholder-slate-400 font-mono" />
                 </div>
 
-                <!-- 🟢 إضافة حقل رقم هاتف مقدم الرعاية الجديد بدلاً من الإيميل وبتباين فاحم وواضح -->
                 <div>
                   <label class="block text-sm font-bold text-slate-700 mb-1.5">رقم هاتف مقدم الرعاية </label>
                   <input v-model="form.caregiver_phone_number" type="text" placeholder="مثال: 218900000000+" class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 focus:border-teal-500 outline-none font-bold text-slate-900 placeholder-slate-400 font-mono" />
@@ -178,11 +191,11 @@
               </div>
             </div>
           </div>
-        </div>
 
-        <p class="text-[10px] text-slate-400 font-semibold leading-relaxed">
-          * سيتم تعيين حسابك الحالي كـ "طبيب معالج مسؤول" عن الحالة تلقائياً، وسيتم تأسيس قنوات الحساسات الـ 8 وبث قراءاتها المباشرة فور الحفظ.
-        </p>
+          <p class="text-[10px] text-slate-400 font-semibold leading-relaxed">
+            * سيتم تعيين حسابك الحالي كـ "طبيب معالج مسؤول" عن الحالة تلقائياً، وسيتم تأسيس قنوات الحساسات الـ 8 وبث قراءاتها المباشرة فور الحفظ.
+          </p>
+        </div>
       </div>
 
     </main>
@@ -192,6 +205,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { Icon } from '@iconify/vue'
 import api from '../api'
 
 const router = useRouter()
@@ -209,7 +223,7 @@ const form = ref({
   caregiver_full_name: '',
   caregiver_username: '',
   caregiver_password: '',
-  caregiver_phone_number: '' // 👈 إضافة رقم الهاتف الابتدائي
+  caregiver_phone_number: '' 
 })
 
 const medicalHistoryFlags = ref({
@@ -261,7 +275,7 @@ const submitPatientForm = async () => {
       caregiver_full_name: form.value.caregiver_full_name,
       caregiver_username: form.value.caregiver_username,
       caregiver_password: form.value.caregiver_password,
-      caregiver_phone_number: form.value.caregiver_phone_number // 👈 إرسال رقم هاتف مقدم الرعاية للباك إند
+      caregiver_phone_number: form.value.caregiver_phone_number 
     }
 
     await api.post('/api/monitored-elements/', payload)
@@ -279,6 +293,9 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.custom-scrollbar {
+  scrollbar-width: thin;
+}
 .custom-scrollbar::-webkit-scrollbar {
   width: 5px;
 }

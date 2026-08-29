@@ -1,4 +1,4 @@
-<!-- Sidebar.vue -->
+<!-- src/components/sidebar.vue -->
 <template>
   <aside
     class="flex flex-col overflow-hidden shadow-2xl transition-transform duration-300 border-l border-white/10
@@ -14,8 +14,9 @@
     <div class="absolute inset-0 -z-10 bg-gradient-to-b from-[#0a3742] via-[#0d4553] to-[#072a33]" />
 
     <div class="relative flex flex-col h-full min-h-0">
-      <!-- Main Navigation List (ثابت) -->
-      <div class="px-2 py-2 border-b border-white/10 flex-shrink-0">
+      
+      <!-- 🟢 شريط الروابط الفردية يظهر فقط على الموبايل ويختفي تماماً على أجهزة اللابتوب (lg:hidden) -->
+      <div class="px-2 py-2 border-b border-white/10 flex-shrink-0 lg:hidden select-none">
         <nav class="space-y-0.5">
           <router-link
             v-for="item in visibleNavigation"
@@ -29,7 +30,7 @@
               <span class="text-xs font-medium">{{ item.label }}</span>
             </div>
 
-            <!-- عداد الإشعارات الحمراء النشطة بالسايدبار -->
+            <!-- عداد الإشعارات الحمراء النشطة بالسايدبار على الموبايل -->
             <span
               v-if="item.to === '/alerts' && alertsStore.activeAlertsCount"
               class="px-1.5 py-0.2 rounded-full bg-rose-500 text-white text-[10px] font-black shadow-sm"
@@ -74,7 +75,7 @@
                   <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
                   <span class="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
                 </span>
-                <!-- الوميض النبضي البرتقالي الهادئ للخطر المتوسط -->
+                <!-- 🟢 الوميض النبضي البرتقالي الهادئ للخطر المتوسط (تم تصحيح خطأ اللصق تماماً هنا) -->
                 <span v-else-if="alertsStore.patientAlertStates[patient.id] === 'HIGH'" class="flex h-2 w-2 relative shrink-0">
                   <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
                   <span class="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
@@ -183,25 +184,25 @@ const navigation = [
   {
     label: 'الكادر الطبي والأطباء',
     to: '/doctors',
-    icon: 'mdi:doctor',
-    allowedRoles: ['admin', 'doctor'] // مقدم الرعاية لا يراها
+    icon: 'grommet-icons:form-next',
+    allowedRoles: ['admin', 'doctor'] 
   },
   {
     label: 'البروتوكولات السريرية',
     to: '/protocols',
-    icon: 'mdi:file-document-outline',
-    allowedRoles: ['admin', 'doctor'] // مقدم الرعاية لا يراها
+    icon: 'grommet-icons:form-next',
+    allowedRoles: ['admin', 'doctor'] 
   },
   {
     label: 'التنبيهات السريرية',
     to: '/alerts',
-    icon: 'mdi:bell-outline',
+    icon: 'grommet-icons:form-next',
     allowedRoles: ['admin', 'doctor', 'caregiver', 'nurse']
   },
   {
     label: 'الإعدادات',
     to: '/settings',
-    icon: 'mdi:cog-outline',
+    icon: 'grommet-icons:form-next',
     allowedRoles: ['admin', 'doctor', 'caregiver', 'nurse']
   }
 ]
@@ -221,7 +222,6 @@ const fetchPatients = async () => {
     patients.value = Array.isArray(data) ? data : data.results || []
     store.patients = patients.value
     
-    // 🟢 تفعيل قنوات البث السوكيت لكافة المرضى المسندين دفعة واحدة للاستماع الفوري
     alertsStore.setupAllWebSockets(patients.value)
     
     patients.value.forEach(patient => alertsStore.updatePatientAlertState(patient.id))
@@ -230,23 +230,21 @@ const fetchPatients = async () => {
   }
 }
 
-// 🟢 تصنيف وفرز المرضى فورياً: المرضى ذوي الخطورة العالية يصعدون لقمة السايدبار بالثانية (أحمر ثم برتقالي ثم مستقر)
 const sortedPatients = computed(() => {
   return [...patients.value].sort((a, b) => {
     const aState = alertsStore.patientAlertStates[a.id]
     const bState = alertsStore.patientAlertStates[b.id]
     
-    // إعطاء أوزان فسيولوجية للأولويات
     const aWeight = aState === 'CRITICAL' ? 2 : (aState === 'HIGH' ? 1 : 0)
     const bWeight = bState === 'CRITICAL' ? 2 : (bState === 'HIGH' ? 1 : 0)
     
-    return bWeight - aWeight // تنازلياً لوضع مريض الخطر الحرج ثم المتوسط في الصدارة
+    return bWeight - aWeight 
   })
 })
 
 const patientClasses = patient => {
   const selected = store.currentPatient?.id === patient.id
-  const alertState = alertsStore.patientAlertStates[patient.id] // 'CRITICAL' أو 'HIGH' أو null
+  const alertState = alertsStore.patientAlertStates[patient.id] 
   
   if (alertState === 'CRITICAL') {
     return [
@@ -272,7 +270,6 @@ const selectPatient = patient => {
   router.push('/dashboard')
 }
 
-/* تهيئة الحالة */
 if (store.isSidebarOpen === undefined) store.isSidebarOpen = false
 if (store.showAddModal === undefined) store.showAddModal = false
 onMounted(fetchPatients)
@@ -323,11 +320,9 @@ onMounted(fetchPatients)
 .patient-item-default:hover { color: #fff; background: rgba(255,255,255,0.06); }
 .patient-item-selected { color: #fff; background: rgba(255,255,255,0.12); border-color: rgba(45,212,191,0.3); }
 
-/* تلوين الحالات الحرجة (النبض السريع والأحمر) */
 .patient-item-alert { color: #ffe4e6; background: rgba(225,29,72,0.15); border-color: rgba(244,63,94,0.3); }
 .patient-item-alert-selected { color: #fff; background: rgba(225,29,72,0.35); border-color: rgba(244,63,94,0.6); }
 
-/* 🟢 تلوين الحالات المتوسطة (النبض الهادئ والبرتقالي الخافت بالـ Sidebar) */
 .patient-item-alert-high { color: #fef3c7; background: rgba(245,158,11,0.15); border-color: rgba(245,158,11,0.3); }
 .patient-item-alert-high:hover { color: #fff; background: rgba(245,158,11,0.25); }
 .patient-item-alert-high-selected { color: #fff; background: rgba(245,158,11,0.35); border-color: rgba(245,158,11,0.6); }

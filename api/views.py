@@ -352,11 +352,21 @@ class InsightViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(monitored_element_id=patient_id)
 
         # 2. فلترة مستوى الخطورة
+        # 2. فلترة الخطورة المزدوجة (صمام أمان يدعم الحروف الكبيرة والصغيرة معاً لتلافي تضارب مطابقة PostgreSQL)
         severity_param = self.request.query_params.get('severity')
         if severity_param:
-            severities = [s.strip().upper() for s in severity_param.split(',')]
-            if 'HIGH' in severities and 'WARNING' not in severities:
-                severities.append('WARNING')
+            severities = []
+            for s in severity_param.split(','):
+                val = s.strip()
+                # 🟢 إضافة الكلمة بحروف كبيرة وصغيرة معاً للبحث الصامد
+                severities.append(val.upper())
+                severities.append(val.lower())
+                
+            # دعم تلميح الـ WARNING الاحتياطي بشقيه
+            if 'HIGH' in severities or 'high' in severities:
+                if 'WARNING' not in severities:
+                    severities.extend(['WARNING', 'warning'])
+                    
             queryset = queryset.filter(severity__in=severities)
 
         # 3. 🟢 الفلترة السريرية الثلاثية بنظام الاستعلام الفرعي المباشر (آمن ومجرب 100%)

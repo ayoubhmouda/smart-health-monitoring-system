@@ -142,8 +142,17 @@ export const useAlertsStore = defineStore('alerts', () => {
 
       const insightsList = Array.isArray(insightRes.data) ? insightRes.data : (insightRes.data.results || [])
       
+      // 🟢 ربط وحفظ الـ Insights مع تصفية صارمة تجلب أحدث تنبيه مرتبط بقانون مفعل حالياً فقط
       const processedInsights = insightsList.map(item => {
-        const action = cachedActions.find(a => Number(a.insight) === Number(item.id))
+        // فلترة وجلب الإجراء الأحدث المرتبط بهذا الاستبصار والمسند لقانون نشط حالياً
+        const action = cachedActions
+          .filter(a => Number(a.insight) === Number(item.id))
+          .sort((a, b) => b.id - a.id) // ترتيب تنازلي للأحدث
+          .find(a => {
+            const ruleObj = cachedRules.find(r => r.name === (a.rule_name || a.rule?.name) || Number(r.id) === Number(a.rule))
+            return ruleObj ? ruleObj.is_active : false // 👈 استبعاد القوانين المعطلة
+          })
+        
         const ruleObj = action ? cachedRules.find(r => r.name === (action.rule_name || action.rule?.name) || Number(r.id) === Number(action.rule)) : null
         const isGlobalRule = ruleObj ? (!ruleObj.monitored_element) : false
 

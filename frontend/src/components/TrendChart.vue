@@ -28,7 +28,7 @@ const formatTime = (ts) => {
     : date.toLocaleTimeString('ar-LY', { hour: '2-digit', minute: '2-digit' })
 }
 
-// 🟢 دالة فرز مرنة تفحص كائنات الـ WebSocket والـ API معاً دون انقطاع
+// دالة فرز مرنة تفحص كائنات الـ WebSocket والـ API معاً دون انقطاع
 const getSensorName = (r) => {
   if (!r) return ''
   return r.sensor_name || r.sensor?.sensor_type?.name || ''
@@ -42,7 +42,7 @@ const updateOrCreateChart = () => {
   // 1. فرز كافة القراءات زمنياً
   const sortedReadings = [...props.readings].sort((a, b) => new Date(a.recorded_at) - new Date(b.recorded_at))
   
-  // 2. تجميع القراءات حسب الطابع الزمني الموحد بدعم المسميات الفلكية المباشرة والمسطحة
+  // 2. تجميع القراءات حسب الطابع الزمني الموحد
   const timeMap = new Map()
 
   sortedReadings.forEach(r => {
@@ -55,7 +55,7 @@ const updateOrCreateChart = () => {
     }
 
     const entry = timeMap.get(timeKey)
-    const sensorName = getSensorName(r) // 🟢 استخدام الفلترة المصلحة
+    const sensorName = getSensorName(r)
 
     if (sensorName === 'Heart Rate' && r.value != null) {
       entry.hr = Number(r.value)
@@ -89,12 +89,12 @@ const updateOrCreateChart = () => {
     }
   }
 
-  // 4. التحديث الانسيابي عند وجود المخطط بالذاكرة
+  // 4. التحديث الانسيابي عند وجود المخطط بالذاكرة (تم إزالة 'none' وتفعيل الـ update الحركي السلس)
   if (chartInstance) {
     chartInstance.data.labels = labels
     chartInstance.data.datasets[0].data = hrValues
     chartInstance.data.datasets[1].data = bpSysValues
-    chartInstance.update('none')
+    chartInstance.update() // 🟢 إزالة 'none' لتمكين الانسيابية والإنزلاق التلقائي الناعم للشارت
     return
   }
 
@@ -147,9 +147,10 @@ const updateOrCreateChart = () => {
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      // 🟢 تنعيم حركات الرسم والإنزلاق الأولي للشارت لتبدو كشاشات العناية المركزة العالمية
       animation: {
-        duration: 400,
-        easing: 'easeOutQuart'
+        duration: 1000,          // زيادة المدة لثانية كاملة لإبراز نعومة حركة الرسم والتمرير
+        easing: 'easeInOutQuart'  // منحنى تسارع انسيابي مهدئ ومريح للعين
       },
       plugins: {
         legend: { display: false },
