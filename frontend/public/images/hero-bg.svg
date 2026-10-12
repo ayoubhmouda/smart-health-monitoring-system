@@ -1,0 +1,241 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="100%" height="100%" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <!-- الخلفية الداكنة العميقة -->
+    <linearGradient id="bg-space" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%" stop-color="#020408"/>
+      <stop offset="40%" stop-color="#040b17"/>
+      <stop offset="70%" stop-color="#07152b"/>
+      <stop offset="100%" stop-color="#030814"/>
+    </linearGradient>
+
+    <!-- فلاتر التوهج المشع للعقد والخطوط -->
+    <filter id="node-glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="6" result="blur1"/>
+      <feGaussianBlur stdDeviation="15" result="blur2"/>
+      <feMerge>
+        <feMergeNode in="blur2"/>
+        <feMergeNode in="blur1"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <filter id="flare-blur" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="25"/>
+    </filter>
+
+    <filter id="line-glow">
+      <feGaussianBlur stdDeviation="2" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- تدرجات العقد الضوئية -->
+    <radialGradient id="cyan-node" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="25%" stop-color="#67e8f9"/>
+      <stop offset="60%" stop-color="#06b6d4" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#0891b2" stop-opacity="0"/>
+    </radialGradient>
+
+    <radialGradient id="bright-lens-flare" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#a5f3fc" stop-opacity="0.9"/>
+      <stop offset="30%" stop-color="#06b6d4" stop-opacity="0.3"/>
+      <stop offset="70%" stop-color="#0284c7" stop-opacity="0.1"/>
+      <stop offset="100%" stop-color="#0369a1" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- تدرجات ألوان خطوط الشبكة -->
+    <linearGradient id="line-p1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#0284c7" stop-opacity="0.2"/>
+    </linearGradient>
+
+    <linearGradient id="line-p2" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#06b6d4" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#0f172a" stop-opacity="0.1"/>
+    </linearGradient>
+
+    <linearGradient id="horizon-fade" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#000000" stop-opacity="0.7"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- 1. الخلفية الكونية الأساسية -->
+  <rect width="1920" height="1080" fill="url(#bg-space)"/>
+
+  <!-- 2. دوائر الهالات الضوئية في النصف العلوي (Bokeh & Lens Flares) -->
+  <g opacity="0.35" filter="url(#flare-blur)">
+    <circle cx="210" cy="180" r="140" fill="#0284c7"/>
+    <circle cx="150" cy="240" r="90" fill="#06b6d4"/>
+    <circle cx="340" cy="300" r="60" fill="#38bdf8"/>
+    <circle cx="1780" cy="260" r="170" fill="#0369a1"/>
+    <circle cx="1850" cy="200" r="110" fill="#0891b2"/>
+  </g>
+
+  <!-- 3. جزيئات ضوئية متناثرة في الفضاء العلوي (Particles) -->
+  <g fill="#93c5fd" opacity="0.65">
+    <circle cx="180" cy="120" r="1.5" opacity="0.8"/>
+    <circle cx="390" cy="210" r="1" opacity="0.5"/>
+    <circle cx="580" cy="140" r="1.2" opacity="0.7"/>
+    <circle cx="750" cy="290" r="1" opacity="0.4"/>
+    <circle cx="920" cy="180" r="1.8" opacity="0.9"/>
+    <circle cx="1140" cy="230" r="1" opacity="0.3"/>
+    <circle cx="1320" cy="160" r="1.5" opacity="0.7"/>
+    <circle cx="1540" cy="270" r="1.2" opacity="0.6"/>
+    <circle cx="1710" cy="130" r="1" opacity="0.5"/>
+    <circle cx="1850" cy="320" r="1.5" opacity="0.8"/>
+    <circle cx="480" cy="380" r="1" opacity="0.4"/>
+    <circle cx="1060" cy="360" r="1.2" opacity="0.5"/>
+    <circle cx="1410" cy="400" r="1" opacity="0.4"/>
+  </g>
+
+  <!-- 4. تدرج إضاءة ناعم في العمق نحو الأفق -->
+  <ellipse cx="960" cy="620" rx="900" ry="240" fill="#0369a1" opacity="0.12" filter="url(#flare-blur)"/>
+
+  <!-- 5. شبكة الأفق البعيدة (Distant Background Mesh) -->
+  <g stroke="#0369a1" stroke-width="0.8" opacity="0.28" fill="none">
+    <polygon points="120,550 240,520 380,560"/>
+    <polygon points="240,520 380,560 490,510"/>
+    <polygon points="380,560 490,510 630,540"/>
+    <polygon points="490,510 630,540 760,500"/>
+    <polygon points="630,540 760,500 890,530"/>
+    <polygon points="760,500 890,530 1020,490"/>
+    <polygon points="890,530 1020,490 1160,540"/>
+    <polygon points="1020,490 1160,540 1290,510"/>
+    <polygon points="1160,540 1290,510 1420,550"/>
+    <polygon points="1290,510 1420,550 1560,520"/>
+    <polygon points="1420,550 1560,520 1710,560"/>
+    <polygon points="1560,520 1710,560 1840,530"/>
+    
+    <!-- نقاط اتصال الأفق البعيدة -->
+    <g fill="#38bdf8" opacity="0.6">
+      <circle cx="240" cy="520" r="1.5"/>
+      <circle cx="490" cy="510" r="1.5"/>
+      <circle cx="760" cy="500" r="1.8"/>
+      <circle cx="1020" cy="490" r="2"/>
+      <circle cx="1290" cy="510" r="1.8"/>
+      <circle cx="1560" cy="520" r="1.5"/>
+    </g>
+  </g>
+
+  <!-- 6. الطبقة الوسطى للتضاريس العقدية (Midground Perspective Mesh) -->
+  <g stroke="#0284c7" stroke-width="1.2" opacity="0.45" fill="none">
+    <!-- مثلثات وخطوط الطبقة المتوسطة -->
+    <polygon points="80,630 220,580 340,640"/>
+    <polygon points="220,580 340,640 460,590"/>
+    <polygon points="340,640 460,590 610,660"/>
+    <polygon points="460,590 610,660 740,610"/>
+    <polygon points="610,660 740,610 880,670"/>
+    <polygon points="740,610 880,670 1010,600"/>
+    <polygon points="880,670 1010,600 1140,680"/>
+    <polygon points="1010,600 1140,680 1280,620"/>
+    <polygon points="1140,680 1280,620 1420,690"/>
+    <polygon points="1280,620 1420,690 1570,610"/>
+    <polygon points="1420,690 1570,610 1720,670"/>
+    <polygon points="1570,610 1720,670 1860,620"/>
+
+    <!-- ترابط رأسي بين الطبقة البعيدة والمتوسطة -->
+    <line x1="220" y1="580" x2="240" y2="520"/>
+    <line x1="460" y1="590" x2="490" y2="510"/>
+    <line x1="740" y1="610" x2="760" y2="500"/>
+    <line x1="1010" y1="600" x2="1020" y2="490"/>
+    <line x1="1280" y1="620" x2="1290" y2="510"/>
+    <line x1="1570" y1="610" x2="1560" y2="520"/>
+  </g>
+
+  <!-- 7. الطبقة الأمامية الحادة والمضيئة (Foreground Detailed Mesh) -->
+  <g filter="url(#line-glow)">
+    <!-- مصفوفة الأضلاع والمثلثات الأمامية القريبة -->
+    <path d="
+      M -20,780 L 140,710 L 290,790 L 140,710 L 320,680 L 480,770 L 320,680 L 490,650
+      L 670,750 L 490,650 L 680,630 L 880,740 L 680,630 L 910,650 L 1090,770 L 910,650
+      L 1120,640 L 1310,760 L 1120,640 L 1340,660 L 1520,780 L 1340,660 L 1540,640
+      L 1730,760 L 1540,640 L 1760,670 L 1940,790
+      
+      M 140,710 L 270,870 L 440,790 L 270,870 L 470,930 L 670,830 L 470,930 L 710,950
+      L 890,830 L 710,950 L 970,980 L 1120,840 L 970,980 L 1230,950 L 1360,820 L 1230,950
+      L 1490,920 L 1610,810 L 1490,920 L 1730,940 L 1820,830
+      
+      M 270,870 L 180,990 L 420,1030 L 470,930 L 420,1030 L 660,1060 L 710,950 L 660,1060
+      L 930,1080 L 970,980 L 930,1080 L 1210,1060 L 1230,950 L 1210,1060 L 1480,1040 L 1490,920
+      L 1480,1040 L 1720,1010 L 1730,940
+    " fill="none" stroke="url(#line-p1)" stroke-width="1.8"/>
+
+    <!-- أضلاع تقاطع عرضية تمنح الإحساس بالتضاريس ثلاثية الأبعاد -->
+    <path d="
+      M 80,630 L 140,710 M 340,640 L 320,680 M 610,660 L 490,650 M 880,670 L 680,630
+      M 1010,600 L 910,650 M 1140,680 L 1120,640 M 1420,690 L 1340,660 M 1720,670 L 1540,640
+      M 440,790 L 480,770 M 670,830 L 670,750 M 890,830 L 880,740 M 1120,840 L 1090,770
+      M 1360,820 L 1310,760 M 1610,810 L 1520,780
+    " fill="none" stroke="url(#line-p2)" stroke-width="1.4"/>
+  </g>
+
+  <!-- 8. العقد والأنوار المشعة البارزة في المقدمة (Foreground Glowing Nodes) -->
+  <g filter="url(#node-glow)">
+    <!-- عقد كبرى مشعة (مع هالات واسعة تشبه الصورة) -->
+    
+    <!-- عقدة كبرى في أقصى اليسار السفلي (Primary Hero Flare) -->
+    <circle cx="160" cy="890" r="30" fill="url(#bright-lens-flare)"/>
+    <circle cx="160" cy="890" r="14" fill="url(#cyan-node)"/>
+    <circle cx="160" cy="890" r="5" fill="#ffffff"/>
+
+    <!-- عقدة كبرى في المنتصف السفلي المائل لليسار -->
+    <circle cx="660" cy="980" r="35" fill="url(#bright-lens-flare)"/>
+    <circle cx="660" cy="980" r="16" fill="url(#cyan-node)"/>
+    <circle cx="660" cy="980" r="6" fill="#ffffff"/>
+
+    <!-- عقدة كبرى في المنتصف المائل لليمين -->
+    <circle cx="1380" cy="870" r="38" fill="url(#bright-lens-flare)"/>
+    <circle cx="1380" cy="870" r="15" fill="url(#cyan-node)"/>
+    <circle cx="1380" cy="870" r="5.5" fill="#ffffff"/>
+
+    <!-- عقدة كبرى في أقصى اليمين السفلي -->
+    <circle cx="1510" cy="980" r="32" fill="url(#bright-lens-flare)"/>
+    <circle cx="1510" cy="980" r="14" fill="url(#cyan-node)"/>
+    <circle cx="1510" cy="980" r="5" fill="#ffffff"/>
+
+    <!-- عقد مضيئة متوسطة موزعة على رؤوس المثلثات -->
+    <circle cx="320" cy="680" r="8" fill="url(#cyan-node)"/>
+    <circle cx="320" cy="680" r="3" fill="#ffffff"/>
+
+    <circle cx="480" cy="770" r="9" fill="url(#cyan-node)"/>
+    <circle cx="480" cy="770" r="3.5" fill="#ffffff"/>
+
+    <circle cx="710" cy="750" r="10" fill="url(#cyan-node)"/>
+    <circle cx="710" cy="750" r="4" fill="#ffffff"/>
+
+    <circle cx="910" cy="650" r="9" fill="url(#cyan-node)"/>
+    <circle cx="910" cy="650" r="3.5" fill="#ffffff"/>
+
+    <circle cx="1120" cy="640" r="8" fill="url(#cyan-node)"/>
+    <circle cx="1120" cy="640" r="3" fill="#ffffff"/>
+
+    <circle cx="1090" cy="770" r="11" fill="url(#cyan-node)"/>
+    <circle cx="1090" cy="770" r="4" fill="#ffffff"/>
+
+    <circle cx="1340" cy="660" r="8" fill="url(#cyan-node)"/>
+    <circle cx="1340" cy="660" r="3" fill="#ffffff"/>
+
+    <circle cx="1540" cy="640" r="7.5" fill="url(#cyan-node)"/>
+    <circle cx="1540" cy="640" r="2.8" fill="#ffffff"/>
+
+    <circle cx="1730" cy="760" r="9" fill="url(#cyan-node)"/>
+    <circle cx="1730" cy="760" r="3.5" fill="#ffffff"/>
+
+    <!-- نقاط القاع القريبة جداً -->
+    <circle cx="420" cy="1030" r="12" fill="url(#cyan-node)"/>
+    <circle cx="420" cy="1030" r="4" fill="#ffffff"/>
+
+    <circle cx="970" cy="980" r="13" fill="url(#cyan-node)"/>
+    <circle cx="970" cy="980" r="4.5" fill="#ffffff"/>
+
+    <circle cx="1210" cy="1060" r="12" fill="url(#cyan-node)"/>
+    <circle cx="1210" cy="1060" r="4" fill="#ffffff"/>
+  </g>
+
+  <!-- 9. تدرج خافت في أسفل الشاشة لضمان تمازج سلس مع محتوى الصفحة اللاحق -->
+  <rect y="880" width="1920" height="200" fill="url(#horizon-fade)" opacity="0.4"/>
+</svg>

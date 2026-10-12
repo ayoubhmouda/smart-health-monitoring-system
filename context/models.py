@@ -1,33 +1,34 @@
+# context/models.py
 from django.db import models
-from core.models import Patient, Elderly, Disabled
 
-class Context(models.Model):
-    monitored_element = models.ForeignKey(
-        'core.MonitoredElement',
-        on_delete=models.CASCADE,
-        related_name='contexts'
-    )
-    physiological_data = models.JSONField(default=dict)
-    activity_data = models.JSONField(default=dict)
-    environmental_data = models.JSONField(default=dict)
-    timestamp = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return f"Context for {self.monitored_element} at {self.timestamp}"
 
 class ContextHistory(models.Model):
+    """
+    الجدول الزمني التراكمي الموحد (Unified Time-Series Context Ledger):
+    يخزن كافة قراءات العلامات الفسيولوجية، البيئية، والنشاط الحركي للمريض معاً
+    لكل لحظة زمنية، مما يمنع الازدواجية ويلغي تماماً عبء عمليات الكتابة المزدوجة.
+    """
     monitored_element = models.ForeignKey(
         'core.MonitoredElement',
         on_delete=models.CASCADE,
-        related_name='context_history'
+        related_name='context_histories'
     )
-    context = models.OneToOneField(Context, on_delete=models.CASCADE)
+    
+    # حقول المجالات الثلاثة وفقاً للورقة الأكاديمية
+    physiological_data = models.JSONField(default=dict, blank=True)
+    activity_data = models.JSONField(default=dict, blank=True)
+    environmental_data = models.JSONField(default=dict, blank=True)
+    
     recorded_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
+        verbose_name = "Context History"
+        verbose_name_plural = "Context Histories"
+        ordering = ['-recorded_at']  # جلب القراءات الأحدث تلقائياً في كافة الاستعلامات
         indexes = [
-            models.Index(fields=['monitored_element', 'recorded_at']),
+            # 🟢 فهرس مركّب مرتب تنازلياً لجلب النافذة الزمنية الأحدث في 1 ملي ثانية
+            models.Index(fields=['monitored_element', '-recorded_at']),
         ]
 
     def __str__(self):
-        return f"History for {self.monitored_element} at {self.recorded_at}"
+        return f"Context for {self.monitored_element} at {self.recorded_at}"

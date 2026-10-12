@@ -278,7 +278,7 @@ const fetchAlertsHistory = async (append = false) => {
 
     console.log("📤 [Alerts.vue] إرسال بارامترات الفلترة للسيرفر:", params)
 
-    const res = await api.get('/api/insights/', { params })
+    const res = await api.get('/api/notifications/', { params })
     
     console.log("📥 [Alerts.vue] الرد الراجع من السيرفر بنجاح:", res.data)
 
@@ -392,7 +392,7 @@ const viewPatientDashboard = (alert) => {
 const resolveAlertLocally = async (alertId) => {
   if (confirm('هل أنت متأكد من حل ومعاينة هذا التنبيه وحذفه نهائياً من سجلات المريض فسيولوجياً؟')) {
     try {
-      await api.delete(`/api/insights/${alertId}/`) 
+      await api.delete(`/api/notifications/${alertId}/`) 
       alertsHistory.value = alertsHistory.value.filter(a => a.id !== alertId) 
     } catch (e) {
       console.error('🚨 [Alerts.vue] فشل حذف وتصفية التنبيه السريري نهائياً من السيرفر:', e)

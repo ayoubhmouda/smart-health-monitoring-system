@@ -1,25 +1,25 @@
+# core/admin.py
 from django.contrib import admin
-from .models import MonitoredElement, Patient, Elderly, Disabled, MedicalHistory
+from .models import MonitoredElement, MedicalHistory
+
 
 @admin.register(MonitoredElement)
 class MonitoredElementAdmin(admin.ModelAdmin):
-    list_display = ('full_name', 'date_of_birth', 'age', 'gender', 'element_type', 'created_at')
-    search_fields = ('full_name',)
+    # عرض الحقول السريرية الجديدة مباشرة في واجهة المشرف
+    list_display = (
+        'full_name', 'date_of_birth', 'age', 'gender', 'element_type', 
+        'diagnosis', 'mobility_level', 'created_at'
+    )
+    search_fields = ('full_name', 'diagnosis')
+    list_filter = ('element_type', 'gender')
+    
+    # تنظيم الحقول المتاحة للتحرير والإضافة بشكل منسق في لوحة التحكم
+    fields = (
+        'full_name', 'date_of_birth', 'gender', 'element_type', 
+        'doctor', 'caregivers', 'diagnosis', 'admission_date', 
+        'mobility_level', 'disability_type'
+    )
 
-@admin.register(Patient)
-class PatientAdmin(admin.ModelAdmin):
-    list_display = ('element', 'diagnosis', 'admission_date')
-    search_fields = ('element__full_name',)
-
-@admin.register(Elderly)
-class ElderlyAdmin(admin.ModelAdmin):
-    list_display = ('element', 'mobility_level')
-    search_fields = ('element__full_name',)
-
-@admin.register(Disabled)
-class DisabledAdmin(admin.ModelAdmin):
-    list_display = ('element', 'disability_type')
-    search_fields = ('element__full_name',)
 
 @admin.register(MedicalHistory)
 class MedicalHistoryAdmin(admin.ModelAdmin):

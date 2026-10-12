@@ -47,13 +47,13 @@
               </div>
             </div>
 
-            <!-- تفاصيل الإنذار -->
+            <!-- 🟢 تفاصيل الإنذار الذكية والمطابقة طبياً للمصدر -->
             <div class="flex flex-col gap-1">
               <h4 class="font-black text-xs sm:text-sm">
-                {{ activeEmergencyAlert.rule_name ? `تجاوز للبروتوكول: [${activeEmergencyAlert.rule_name}]` : 'تجاوز لشبكة الأمان الصارمة!' }}
+                {{ alertTitle }}
               </h4>
               <p class="text-xs leading-relaxed font-bold animate-pulse" :class="alertClasses.descText">
-                {{ activeEmergencyAlert.rule_name ? 'تم رصد نشاط فسيولوجي يتطابق مع شروط القاعدة السريرية للمريض.' : 'تم رصد هبوط حاد في مستويات الأكسجين أو التنفس للمريض المعروض أعلاه.' }}
+                {{ alertDescription }}
               </p>
             </div>
 
@@ -106,7 +106,8 @@ const patientStore = usePatientStore()
 const alertsStore = useAlertsStore()                
 
 const { locale } = useI18n()
-const isAuthPage = computed(() => route.path === '/login' || route.path === '/register')
+// 🟢 يشمل الصفحة الرئيسية / وصفحات الدخول لتعرض كصفحات حرة كاملة الشاشة
+const isAuthPage = computed(() => ['/', '/login', '/register'].includes(route.path))
 
 watch(() => patientStore.currentPatient?.id, (newId) => {
   if (newId) {
@@ -132,6 +133,10 @@ const alertPatientDetails = computed(() => {
 
 const activeEmergencyAlert = computed(() => {
   if (!alertsStore.latestThresholdInsight) return null
+  
+  // 🟢 إغلاق تلقائي فور زوال الخطر وتعافي المريض
+  if (alertsStore.latestThresholdInsight.status === 'resolved') return null
+
   const pId = targetPatientId.value
   if (!pId || !alertsStore.patientAlertStates[pId]) return null
 
@@ -177,18 +182,77 @@ const alertClasses = computed(() => {
   }
 })
 
-// مسمى شارة نوع التنبيه ديناميكياً بناءً على مصدر وقناة التنبيه
+// 🟢 1. مسمى شارة نوع التنبيه ديناميكياً بدعم كافة صيغ الباك إند
 const alertSourceLabel = computed(() => {
   const alert = activeEmergencyAlert.value
   if (!alert) return ''
   const src = alert.source?.toLowerCase()
-  if (src === 'threshold') return 'إنذار شبكة الأمان'
   
-  // 🟢 التمييز البرمجي والسريري الدقيق بين البروتوكول العام وقاعدة الطبيب
-  if (src === 'rules' || src === 'rule') {
-    return alert.is_global_rule ? 'بروتوكول عام (المدير)' : 'قاعدة مخصصة للمريض'
+  if (src === 'threshold') return 'إنذار شبكة الأمان'
+  if (src === 'ml_model' || src === 'ml') return 'تنبؤ استباقي (AI)'
+  
+  if (src === 'global_rule' || alert.is_global_rule === true) {
+    return 'بروتوكول عام للمستشفى'
   }
-  return 'قاعدة مخصصة للمريض'
+  
+  if (src === 'patient_rule' || alert.is_global_rule === false) {
+    return 'قاعدة مخصصة للمريض'
+  }
+
+  if (src === 'rules' || src === 'rule') {
+    return alert.is_global_rule ? 'بروتوكول عام للمستشفى' : 'قاعدة مخصصة للمريض'
+  }
+  
+  return alert.is_global_rule ? 'بروتوكول عام للمستشفى' : 'قاعدة مخصصة للمريض'
+})
+
+// 🟢 2. استخراج اسم القاعدة بمرونة فائقة (سواء كحقل مستقل أو من داخل نص الرسالة)
+const extractedRuleName = computed(() => {
+  const alert = activeEmergencyAlert.value
+  if (!alert) return ''
+  if (alert.rule_name) return alert.rule_name
+  
+  // استخراج الاسم الواقع بين القوسين [اسم القاعدة] من الرسالة
+  const match = alert.message?.match(/\[(.*?)\]/)
+  return match ? match[1] : ''
+})
+
+// 🟢 3. العنوان السريري الدقيق
+const alertTitle = computed(() => {
+  const alert = activeEmergencyAlert.value
+  if (!alert) return ''
+  const src = alert.source?.toLowerCase()
+  
+  if (src === 'threshold') {
+    return 'تجاوز لشبكة الأمان الصارمة!'
+  }
+  
+  if (extractedRuleName.value) {
+    const isGlobal = (alert.is_global_rule === true || src === 'global_rule')
+    const prefix = isGlobal ? 'تجاوز للبروتوكول العام' : 'تجاوز لقاعدة المريض'
+    return `${prefix}: [${extractedRuleName.value}]`
+  }
+  
+  return (alert.is_global_rule || src === 'global_rule') 
+    ? 'تجاوز للبروتوكول العام للمستشفى' 
+    : 'تجاوز لقاعدة سريرية للمريض'
+})
+
+// 🟢 4. الوصف الطبي المتناسق مع نوع الإنذار
+const alertDescription = computed(() => {
+  const alert = activeEmergencyAlert.value
+  if (!alert) return ''
+  const src = alert.source?.toLowerCase()
+  
+  if (src === 'threshold') {
+    return 'تم رصد هبوط حاد في مستويات الأكسجين أو التنفس للمريض المعروض أعلاه.'
+  }
+  
+  if (alert.is_global_rule === true || src === 'global_rule') {
+    return 'تم رصد نشاط فسيولوجي يتطابق مع شروط البروتوكول العام للمستشفى.'
+  }
+  
+  return 'تم رصد نشاط فسيولوجي يتطابق مع شروط القاعدة السريرية للمريض.'
 })
 
 const viewAffectedPatient = () => {

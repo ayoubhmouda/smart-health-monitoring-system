@@ -36,6 +36,12 @@ class MonitoredElement(models.Model):
         help_text="مقدمو الرعاية المسؤولون عن متابعة المريض"
     )
 
+    # 🟢 دمج حقول الفئات المخصصة لمنع الـ JOINs والاستعلام المباشر فائق السرعة
+    diagnosis = models.CharField(max_length=255, blank=True, null=True, help_text="التشخيص الطبي (خاص بالمرضى)")
+    admission_date = models.DateField(null=True, blank=True, help_text="تاريخ دخول المستشفى (خاص بالمرضى)")
+    mobility_level = models.CharField(max_length=50, blank=True, null=True, help_text="مستوى القدرة الحركية (خاص بكبار السن)")
+    disability_type = models.CharField(max_length=100, blank=True, null=True, help_text="نوع الإعاقة (خاص بذوي الهمم)")
+
     @property
     def age(self) -> int:
         """يحسب العمر الحالي بناءً على تاريخ الميلاد بدقة."""
@@ -44,33 +50,12 @@ class MonitoredElement(models.Model):
             (today.month, today.day) < (self.date_of_birth.month, self.date_of_birth.day)
         )
 
+    class Meta:
+        verbose_name = "Monitored Element"
+        verbose_name_plural = "Monitored Elements"
+
     def __str__(self):
         return f"{self.full_name} ({self.get_element_type_display()})"
-
-
-class Patient(models.Model):
-    element = models.OneToOneField(MonitoredElement, on_delete=models.CASCADE, related_name='patient_profile')
-    diagnosis = models.CharField(max_length=255, blank=True)
-    admission_date = models.DateField(null=True, blank=True)
-
-    def __str__(self):
-        return f"Patient: {self.element.full_name}"
-
-
-class Elderly(models.Model):
-    element = models.OneToOneField(MonitoredElement, on_delete=models.CASCADE, related_name='elderly_profile')
-    mobility_level = models.CharField(max_length=50, blank=True)
-
-    def __str__(self):
-        return f"Elderly: {self.element.full_name}"
-
-
-class Disabled(models.Model):
-    element = models.OneToOneField(MonitoredElement, on_delete=models.CASCADE, related_name='disabled_profile')
-    disability_type = models.CharField(max_length=100, blank=True)
-
-    def __str__(self):
-        return f"Disabled: {self.element.full_name}"
 
 
 class MedicalHistory(models.Model):
@@ -89,6 +74,10 @@ class MedicalHistory(models.Model):
         )
     )
     updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Medical History"
+        verbose_name_plural = "Medical Histories"
 
     def __str__(self):
         return f'Medical History of {self.monitored_element.full_name}'

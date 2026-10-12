@@ -3,15 +3,19 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import api from '../api'
 import { usePatientStore } from './patient'
+import { useDoctorStore } from './doctor'
 
 export const useAlertsStore = defineStore('alerts', () => {
   const allLatestReadings = ref({})       
   const allChartReadings = ref({})        
   const allMLInsights = ref({})           
-  const activeInsights = ref({})          // { [patientId]: activeInsightObject }
-  const patientAlertStates = ref({})      // { [patientId]: 'CRITICAL' | 'HIGH' | null }
+  const allRuleProgressions = ref({})     // تخزين تقدم القواعد لكل مريض { [patientId]: [...] }
+  const activeInsights = ref({})          
+  const patientAlertStates = ref({})      // مخصص لحالة السايدبار اللحظية الحية فقط
+  const unresolvedPatientIds = ref([])    
+  const unhandledAlertsCount = ref(0)     // 🟢 عداد إجمالي التنبيهات الحقيقي للنافبار
   const alertTimestamps = ref({})         
-  const dismissedAlertIds = ref(new Set()) // لتتبع الإنذارات التي أخفاها الطبيب من الشاشة فقط
+  const dismissedAlertIds = ref(new Set()) 
 
   const latestReadings = ref({})
   const latestInsight = ref(null)
@@ -87,12 +91,26 @@ export const useAlertsStore = defineStore('alerts', () => {
     }
   }
 
-  // 🟢 جلب البيانات بالـ REST API مع حصر الإنذارات وتمييز هوية القوانين بدقة
-// 🟢 جلب البيانات بالـ REST API مع حصر الإنذارات وتطهير فوري للحالة النشطة لمنع تداخل الأشباح
+  // 🟢 جلب العدد الإجمالي الحقيقي للتنبيهات غير المحلولة من جدول الإشعارات
+const fetchUnhandledAlertsCount = async () => {
+    try {
+      const res = await api.get('/api/notifications/unread-count/')
+      if (res.data?.count !== undefined) {
+        unhandledAlertsCount.value = res.data.count
+      }
+    } catch (e) {
+      console.error('Failed to fetch unhandled alerts count:', e)
+    }
+  }
+
+  // 🟢 إنقاص العداد بمقدار 1 فقط عند ضغط الطبيب
+  const decrementAlertsCount = () => {
+    unhandledAlertsCount.value = Math.max(0, unhandledAlertsCount.value - 1)
+  }
+
   const fetchData = async (patientId) => {
     if (!patientId) return
     
-    // 🛡️ صمام الأمان الفوري (0ms): تصفير بيانات العرض الحالي فوراً لمنع ظهور شبح بيانات المريض السابق
     const patientStore = usePatientStore()
     if (Number(patientId) === Number(patientStore.currentPatient?.id)) {
       latestReadings.value = {}
@@ -135,40 +153,38 @@ export const useAlertsStore = defineStore('alerts', () => {
 
       allLatestReadings.value[patientId] = currentPatientReadings
 
-      // حماية من سباق البيانات (Race Condition): نتأكد أن المريض المختار لم يتغير أثناء فترة الطلب
       if (Number(patientId) === Number(patientStore.currentPatient?.id)) {
         latestReadings.value = currentPatientReadings
       }
 
       const insightsList = Array.isArray(insightRes.data) ? insightRes.data : (insightRes.data.results || [])
       
-      // 🟢 ربط وحفظ الـ Insights مع تصفية صارمة تجلب أحدث تنبيه مرتبط بقانون مفعل حالياً فقط
       const processedInsights = insightsList.map(item => {
-        // فلترة وجلب الإجراء الأحدث المرتبط بهذا الاستبصار والمسند لقانون نشط حالياً
         const action = cachedActions
           .filter(a => Number(a.insight) === Number(item.id))
-          .sort((a, b) => b.id - a.id) // ترتيب تنازلي للأحدث
+          .sort((a, b) => b.id - a.id)
           .find(a => {
             const ruleObj = cachedRules.find(r => r.name === (a.rule_name || a.rule?.name) || Number(r.id) === Number(a.rule))
-            return ruleObj ? ruleObj.is_active : false // 👈 استبعاد القوانين المعطلة
+            return ruleObj ? ruleObj.is_active : false
           })
         
         const ruleObj = action ? cachedRules.find(r => r.name === (action.rule_name || action.rule?.name) || Number(r.id) === Number(action.rule)) : null
         const isGlobalRule = ruleObj ? (!ruleObj.monitored_element) : false
+        const ruleCondition = ruleObj ? (ruleObj.condition || {}) : {}
 
         return {
           ...item,
           monitored_element: item.monitored_element || patientId,
           rule_name: action ? (action.rule_name || action.rule?.name) : null,
           action_template: action ? (action.description || action.rule?.action_template) : null,
-          is_global_rule: isGlobalRule
+          is_global_rule: isGlobalRule,
+          recipient: ruleCondition.recipient || 'doctor_and_caregiver' 
         }
       })
 
       const mlInsight = processedInsights.find(i => i.source?.toLowerCase() === 'ml_model' || i.source?.toLowerCase() === 'ml')
       allMLInsights.value[patientId] = mlInsight || null
 
-      // حماية من سباق البيانات: تعيين التنبؤ فقط للمريض النشط الحالي
       if (Number(patientId) === Number(patientStore.currentPatient?.id)) {
         latestInsight.value = mlInsight || null
       }
@@ -177,6 +193,8 @@ export const useAlertsStore = defineStore('alerts', () => {
       const serverTime = latestReading ? new Date(latestReading.recorded_at).getTime() : Date.now()
 
       const activeThreshold = processedInsights.find(i => {
+        if (i.status === 'resolved' || i.status === 'acknowledged') return false
+
         const sev = String(i.severity).toUpperCase()
         const isSevere = ['CRITICAL', 'HIGH'].includes(sev)
         if (!isSevere) return false
@@ -194,15 +212,27 @@ export const useAlertsStore = defineStore('alerts', () => {
 
       if (activeThreshold) {
         const severity = String(activeThreshold.severity).toUpperCase()
-        activeInsights.value[patientId] = activeThreshold
-        patientAlertStates.value[patientId] = severity
-        alertTimestamps.value[patientId] = Date.now()
-      } else {
-        const lastReceived = alertTimestamps.value[patientId] || 0
-        if (Date.now() - lastReceived > 35000) {
-          activeInsights.value[patientId] = null
-          patientAlertStates.value[patientId] = null
+        
+        const doctorStore = useDoctorStore()
+        const userRole = doctorStore.role?.toLowerCase() || localStorage.getItem('user_role')?.toLowerCase() || ''
+        const recipient = activeThreshold.recipient || 'doctor_and_caregiver'
+        
+        const isAllowed = 
+          recipient === 'doctor_and_caregiver' ||
+          (recipient === 'treating_doctor_only' && (userRole === 'doctor' || userRole === 'admin')) ||
+          (recipient === 'caregiver_only' && (userRole === 'caregiver' || userRole === 'nurse'))
+
+        if (isAllowed) {
+          activeInsights.value[patientId] = activeThreshold
+          patientAlertStates.value[patientId] = severity
+          alertTimestamps.value[patientId] = Date.now()
+          
+          if (!unresolvedPatientIds.value.includes(Number(patientId))) {
+            unresolvedPatientIds.value.push(Number(patientId))
+          }
         }
+      } else {
+        // لا تصفير زمني تلقائي ليبقى العداد ثابتاً
       }
 
       lastUpdatedTime.value = new Date().toLocaleTimeString('ar-LY', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
@@ -232,17 +262,15 @@ export const useAlertsStore = defineStore('alerts', () => {
     fetchData(patientId)
   }
 
-  // 🟢 عدد الإنذارات في السايدبار: CRITICAL و HIGH فقط
+  // 🟢 العداد المعروض في النافبار: يقرأ مباشرة من إجمالي التنبيهات المعلقة الحقيقية
   const activeAlertsCount = computed(() => {
-    return Object.values(patientAlertStates.value).filter(v => v === 'CRITICAL' || v === 'HIGH').length
+    return unhandledAlertsCount.value
   })
 
-  // 🟢 اختيار التنبيه العائم الأكثر خطورة (مع استبعاد ما أغلقه الطبيب مؤقتاً بـ X)
   const latestThresholdInsight = computed(() => {
     const patientStore = usePatientStore()
     const currentId = patientStore.currentPatient?.id
 
-    // إذا كان المريض الحالي في حالة حرجة/عالية ولم يغلق الطبيب بطاقته، يُعرض أولاً
     if (currentId && activeInsights.value[currentId] && patientAlertStates.value[currentId]) {
       const currentAlert = activeInsights.value[currentId]
       if (!dismissedAlertIds.value.has(currentAlert.id)) {
@@ -269,11 +297,21 @@ export const useAlertsStore = defineStore('alerts', () => {
     return bestInsight
   })
 
-  // 🟢 دالة إخفاء بطاقة التنبيه المنبثقة فقط دون مسح الإنذار من السايدبار
   const dismissAlert = (alertId) => {
     if (alertId) {
       dismissedAlertIds.value.add(alertId)
     }
+  }
+
+  // 🟢 تصفير حالة السايدبار وإنقاص عداد النافبار بنقرة الطبيب حصراً
+  const clearPatientAlert = (patientId) => {
+    if (patientId) {
+      activeInsights.value[patientId] = null
+      patientAlertStates.value[patientId] = null
+      alertTimestamps.value[patientId] = null
+      unresolvedPatientIds.value = unresolvedPatientIds.value.filter(id => Number(id) !== Number(patientId))
+    }
+    decrementAlertsCount()
   }
 
   const startCountdown = (patientId) => {
@@ -292,21 +330,8 @@ export const useAlertsStore = defineStore('alerts', () => {
 
   const startAlertPruneService = () => {
     clearInterval(alertPruneTimer)
-    alertPruneTimer = setInterval(() => {
-      const now = Date.now()
-      for (const pId in alertTimestamps.value) {
-        const lastAlertTime = alertTimestamps.value[pId]
-        if (lastAlertTime && (now - lastAlertTime > 45000)) {
-          activeInsights.value[pId] = null
-          patientAlertStates.value[pId] = null
-          alertTimestamps.value[pId] = null
-        }
-      }
-    }, 5000)
   }
 
-  // 🟢 استماع فوري للـ WebSockets وتصفية صارمة لـ CRITICAL و HIGH
-  // 🟢 استماع فوري للـ WebSockets وتنسيق مستقل ومطور لتنبؤات الـ ML والإنذارات السريرية
   const setupAllWebSockets = (patientList) => {
     Object.values(wsSockets.value).forEach(socket => {
       if (socket) {
@@ -318,6 +343,9 @@ export const useAlertsStore = defineStore('alerts', () => {
     wsSockets.value = {}
     clearInterval(countdownTimer)
     startAlertPruneService()
+
+    // 🟢 جلب إجمالي التنبيهات المعلقة الحقيقية من قاعدة البيانات فور بدء الاتصال
+    fetchUnhandledAlertsCount()
 
     if (!Array.isArray(patientList) || patientList.length === 0) return
 
@@ -365,13 +393,24 @@ export const useAlertsStore = defineStore('alerts', () => {
               const insightData = {
                 ...payload.insight,
                 monitored_element: payload.insight?.monitored_element || p_id,
-                is_global_rule: payload.insight?.is_global_rule // استقبال نوع ومصدر القاعدة من البث الفوري للسوكيت
+                is_global_rule: payload.insight?.is_global_rule,
+                recipient: payload.insight?.recipient || 'doctor_and_caregiver'
+              }
+
+              // 1. التعافي اللحظي للسايدبار: مسح اللون وإغلاق النافذة فوراً عند زوال الخطر
+              if (insightData.status === 'resolved') {
+                activeInsights.value[p_id] = null
+                patientAlertStates.value[p_id] = null
+                alertTimestamps.value[p_id] = null
+                if (Number(p_id) === Number(activeCurrentId)) {
+                  showEmergencyBanner.value = false
+                }
+                return
               }
               
               const severity = String(insightData.severity).toUpperCase()
               const isML = insightData.source?.toLowerCase() === 'ml_model' || insightData.source?.toLowerCase() === 'ml'
 
-              // 🟢 1. إذا كان التنبؤ مصدره الـ ML، نحدث الـ State الخاص به دوماً بشكل مستقل لملء كارت التنبؤات
               if (isML) {
                 allMLInsights.value[p_id] = insightData
                 if (Number(p_id) === Number(activeCurrentId)) {
@@ -379,13 +418,30 @@ export const useAlertsStore = defineStore('alerts', () => {
                 }
               }
 
-              // 🟢 2. إذا كانت الخطورة حرجة أو عالية (وليس ML)، يُعامل كخطر لشبكة الأمان والبروتوكولات في السايدبار وبانر الطوارئ
-              if (['CRITICAL', 'HIGH'].includes(severity) && !isML) {
+              const doctorStore = useDoctorStore()
+              const userRole = doctorStore.role?.toLowerCase() || localStorage.getItem('user_role')?.toLowerCase() || ''
+              const recipient = insightData.recipient || 'doctor_and_caregiver'
+              
+              const isAllowed = 
+                recipient === 'doctor_and_caregiver' ||
+                (recipient === 'treating_doctor_only' && (userRole === 'doctor' || userRole === 'admin')) ||
+                (recipient === 'caregiver_only' && (userRole === 'caregiver' || userRole === 'nurse'))
+
+              if (['CRITICAL', 'HIGH'].includes(severity) && !isML && isAllowed) {
                 activeInsights.value[p_id] = insightData
                 patientAlertStates.value[p_id] = severity
                 alertTimestamps.value[p_id] = Date.now()
+
+                if (!unresolvedPatientIds.value.includes(Number(p_id))) {
+                  unresolvedPatientIds.value.push(Number(p_id))
+                }
+                // 🟢 تم حذف الزيادة العشوائية من هنا لمنع تضخم العداد مع كل دورة
               }
+            } else if (payload?.type === 'rule_progression_update') {
+              allRuleProgressions.value[p_id] = Array.isArray(payload.progressions) ? payload.progressions : []
             } else if (payload?.type === 'alert') {
+              // 🟢 عند ولادة تنبيه جديد حقيقي، نستعلم عن العدد المحدث مباشرة من السيرفر
+              fetchUnhandledAlertsCount()
               fetchData(p_id)
             }
           } catch (err) {
@@ -411,10 +467,17 @@ export const useAlertsStore = defineStore('alerts', () => {
     return pId ? (allChartReadings.value[pId] || []) : []
   })
 
+  const currentPatientProgressions = computed(() => {
+    const pId = usePatientStore().currentPatient?.id
+    return pId ? (allRuleProgressions.value[pId] || []) : []
+  })
+
   return {
     allLatestReadings,
     allChartReadings,
     allMLInsights,
+    allRuleProgressions,
+    currentPatientProgressions,
     activeInsights,
     latestReadings,
     latestInsight,
@@ -427,11 +490,16 @@ export const useAlertsStore = defineStore('alerts', () => {
     countdown,
     patientAlertStates,
     activeAlertsCount,
+    unresolvedPatientIds,
+    unhandledAlertsCount,
+    fetchUnhandledAlertsCount,
+    decrementAlertsCount,
     fetchData,
     fetchChartData,
     setupAllWebSockets,
     updatePatientAlertState,
     startCountdown,
-    dismissAlert
+    dismissAlert,
+    clearPatientAlert
   }
 })

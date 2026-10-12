@@ -10,24 +10,28 @@
           <Icon icon="solar:tuning-2-bold" class="w-5 h-5" />
         </div>
         <div>
-          <h1 class="text-xl md:text-2xl font-extrabold text-white tracking-tight">باني القواعد والبروتوكولات الخاصة للمريض</h1>
-          <p class="text-xs text-teal-200/70 mt-1 font-medium">إنشاء بروتوكولات فسيولوجية مخصصة وموجهة سريرياً لحالة هذا المريض حصراً</p>
+          <h1 class="text-xl md:text-2xl font-extrabold text-white tracking-tight">
+            باني القواعد والبروتوكولات الخاصة للمريض: {{ patientName }}
+          </h1>
+          <p class="text-xs text-teal-200/70 mt-1 font-medium">
+            إنشاء بروتوكولات فسيولوجية مخصصة وموجهة سريرياً لحالة ({{ patientName }}) حصراً
+          </p>
         </div>
       </div>
 
-      <!-- أزرار الإلغاء والحفظ بالهوية الزجاجية المتناسقة مع لوحة التحكم -->
+      <!-- أزرار التجاهل والحفظ بالعربية والألوان المحددة -->
       <div class="flex items-center gap-2.5 w-full sm:w-auto justify-end select-none">
         <button 
           @click="discardChanges" 
           class="px-5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/20 font-bold text-xs backdrop-blur-sm transition-all cursor-pointer"
         >
-          Discard
+          تجاهل
         </button>
         <button 
           @click="submitRuleForm" 
-          class="bg-teal-500/20 hover:bg-teal-500/30 text-teal-200 border border-teal-400/20 font-bold text-xs px-6 py-2.5 rounded-xl backdrop-blur-sm transition-all shadow-lg shadow-teal-900/10 cursor-pointer"
+          class="bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-400/30 font-bold text-xs px-6 py-2.5 rounded-xl backdrop-blur-sm transition-all shadow-lg shadow-emerald-900/10 cursor-pointer"
         >
-          Save Protocol
+          حفظ البروتوكول
         </button>
       </div>
     </header>
@@ -38,7 +42,7 @@
       <!-- القسم الأول: هوية القاعدة الخاصة والمستلم -->
       <div class="lg:col-span-4 bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between overflow-hidden">
         
-        <!-- 🟢 ترويسة هوية القاعدة باللون التركوازي الغامق والأيقونة البيضاء على اليسار المقابل تماماً -->
+        <!-- ترويسة هوية القاعدة -->
         <div class="bg-[#0a3d48] text-white p-5 rounded-t-[2rem] flex items-center justify-between gap-3 select-none shrink-0">
           <div class="flex items-center gap-2">
             <span class="w-5 h-5 bg-white/10 text-teal-300 border border-white/5 font-bold rounded-lg flex items-center justify-center text-[10px] font-mono">1</span>
@@ -55,7 +59,7 @@
               v-model="ruleForm.name" 
               type="text" 
               required 
-              placeholder="بروتوكول ضبط أكسجين نوح آدم الخاص" 
+              :placeholder="`بروتوكول ضبط أكسجين ${patientName} الخاص`" 
               class="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 focus:border-teal-500 outline-none font-semibold text-slate-700" 
             />
           </div>
@@ -91,7 +95,7 @@
             </div>
           </div>
 
-          <!-- أداة الخيار الثنائي الحصري لطريقة احتساب مهل الإنذار -->
+          <!-- طريقة احتساب مهل الإنذار -->
           <div class="space-y-1.5">
             <label class="block text-[10px] font-extrabold text-slate-400 mb-1.5 uppercase tracking-wider">
               طريقة احتساب مهلة الإنذار السريري
@@ -116,7 +120,7 @@
             </div>
           </div>
 
-          <!-- حقل استدامة الخطر العام للبروتوكول بأكمله (يُفتح فقط في الوضع الموحد) -->
+          <!-- مهلة الاستدامة العامة -->
           <div class="space-y-1.5 transition-all duration-300" :class="{ 'opacity-40 pointer-events-none': ruleForm.duration_mode === 'custom' }">
             <label class="block text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">
               مهلة الاستدامة العامة للبروتوكول
@@ -137,7 +141,7 @@
             </select>
           </div>
 
-          <!-- حقل التجاوز الصريح للبروتوكولات العامة لمنع تداخل الإنذارات الكاذبة -->
+          <!-- حقل التجاوز الصريح للبروتوكولات العامة -->
           <div class="space-y-1.5" v-if="globalRules.length > 0">
             <label class="block text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">
               إلغاء واستبدال بروتوكولات عامة نشطة
@@ -158,13 +162,13 @@
               </label>
             </div>
             <p class="text-[9px] text-slate-400 mt-1 leading-relaxed">
-              عند حفظ هذا البروتوكول, سيقوم النظام تلقائياً بتعطيل الإنذارات العامة المحددة أعلاه لنوح فقط تفادياً للتكرار [1, 2].
+              عند حفظ هذا البروتوكول، سيقوم النظام تلقائياً بتعطيل الإنذارات العامة المحددة أعلاه لـ ({{ patientName }}) فقط تفادياً للتكرار [1, 2].
             </p>
           </div>
 
         </div>
 
-        <!-- حالة التنشيط المنزلقة مع التعريب -->
+        <!-- حالة التنشيط المنزلقة -->
         <div class="p-6 flex items-center justify-between border-t border-slate-100 text-xs select-none shrink-0">
           <span class="font-extrabold text-[10px] text-slate-400 uppercase tracking-wider">نشط</span>
           <button 
@@ -180,29 +184,26 @@
         </div>
       </div>
 
-      <!-- القسم الثاني: شروط التفعيل (ترويسة تركوازية ومفتاح الإضافة والأيقونة على اليسار المقابل للعنوان) -->
+      <!-- القسم الثاني: شروط التفعيل -->
       <div class="lg:col-span-8 bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col overflow-hidden gap-0">
-        <!-- 🟢 ترويسة شروط التفعيل باللون التركوازي الغامق ومفتاح الإضافة على اليسار المقابل تماماً -->
         <div class="bg-[#0a3d48] text-white p-5 rounded-t-[2rem] flex items-center justify-between gap-3 select-none shrink-0">
           <div class="flex items-center gap-2">
             <span class="w-5 h-5 bg-white/10 text-teal-300 border border-white/5 font-bold rounded-lg flex items-center justify-center text-[10px] font-mono">2</span>
             <span class="font-extrabold text-white text-xs">شروط التفعيل المنطقية لحالة المريض</span>
           </div>
-          <!-- زر الإضافة مدمج بجانب الأيقونة البيضاء على اليسار المقابل للعنوان -->
           <div class="flex items-center gap-3 select-none">
             <button 
               type="button" 
               @click="addCondition" 
               class="text-[9px] font-bold text-teal-200 bg-white/10 hover:bg-white/20 border border-white/10 px-2.5 py-1.5 rounded-xl transition-all cursor-pointer"
             >
-              + Add Condition
+              + إضافة شرط
             </button>
             <Icon icon="solar:tuning-2-bold" class="w-5 h-5 text-white shrink-0" />
           </div>
         </div>
 
         <div class="p-6 flex-1 space-y-4">
-          <!-- صفوف الشروط الديناميكية الموزعة بـ 12 عمود متجانس -->
           <div class="space-y-3 overflow-y-auto max-h-[220px] custom-scrollbar pr-1">
             <div 
               v-for="(cond, index) in ruleForm.conditions" 
@@ -275,7 +276,7 @@
                 />
               </div>
 
-              <!-- 5. حقل مهلة استدامة اختيارية مخصصة لهذا الحساس -->
+              <!-- 5. حقل مهلة استدامة الحساس -->
               <div class="col-span-3 transition-all duration-300" :class="{ 'opacity-35 pointer-events-none select-none': ruleForm.duration_mode === 'global' }">
                 <select 
                   v-model="cond.duration_seconds" 
@@ -312,9 +313,8 @@
         </div>
       </div>
 
-      <!-- القسم الثالث: الإجراء والتوصية السريرية والمستلم (ترويسة تركوازية وأيقونة بيضاء مقابلة لليسار) -->
+      <!-- القسم الثالث: الإجراء والتوصية السريرية والمستلم -->
       <div class="lg:col-span-12 bg-white rounded-2xl border border-slate-200 shadow-sm space-y-0 overflow-hidden flex flex-col">
-        <!-- 🟢 ترويسة الإجراء باللون التركوازي الغامق والأيقونة البيضاء على اليسار المقابل تماماً للعنوان وبدون أي حدود -->
         <div class="bg-[#0a3d48] text-white p-5 rounded-t-[2rem] flex items-center justify-between gap-3 select-none shrink-0">
           <div class="flex items-center gap-2">
             <span class="w-5 h-5 bg-white/10 text-teal-300 border border-white/5 font-bold rounded-lg flex items-center justify-center text-[10px] font-mono">3</span>
@@ -369,14 +369,15 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue' // 🟢 دمج الـ computed في سطر الاستدعاء الرئيسي الفردي والوحيد
+import { ref, onMounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { Icon } from '@iconify/vue' // 🟢 استيراد أيقونات إيكونيفاي الفردي والوحيد لمنع كراش المجمع
+import { Icon } from '@iconify/vue'
 import api from '../api'
 
 const router = useRouter()
 const route = useRoute()
 const patientId = ref(route.params.id) 
+const patientName = ref('المريض')
 
 const loading = ref(false)
 const isEditing = ref(false)
@@ -384,6 +385,7 @@ const currentRuleId = ref(null)
 
 const globalRules = ref([]) 
 
+// نموذج الاستمارة
 const ruleForm = ref({
   name: '',
   conditions: [
@@ -399,6 +401,29 @@ const ruleForm = ref({
   recipient: 'treating_doctor_only',
   is_active: true
 })
+
+// تتبع الحالة الأصلية للنموذج لفحص التغييرات بدقة
+const initialFormState = ref('')
+
+const saveInitialState = () => {
+  initialFormState.value = JSON.stringify(ruleForm.value)
+}
+
+const isFormDirty = () => {
+  return initialFormState.value !== '' && JSON.stringify(ruleForm.value) !== initialFormState.value
+}
+
+// جلب تفاصيل المريض لاستخراج اسمه بدقة
+const fetchPatientDetails = async () => {
+  try {
+    const res = await api.get(`/api/monitored-elements/${patientId.value}/`)
+    if (res.data && res.data.full_name) {
+      patientName.value = res.data.full_name
+    }
+  } catch (e) {
+    console.error('فشل تحميل اسم المريض:', e)
+  }
+}
 
 const fetchGlobalRules = async () => {
   try {
@@ -430,8 +455,13 @@ const removeCondition = (index) => {
   }
 }
 
+// 🟢 تجاهل التغييرات بذكاء UX: إذا لم يجرِ المستخدم أي تعديل يتم الرجوع فوراً بدون أي تأكيد
 const discardChanges = () => {
-  if (confirm('هل أنت متأكد من رغبتك في إلغاء التعديلات والرجوع للملف الطبي؟')) {
+  if (isFormDirty()) {
+    if (confirm('هل أنت متأكد من رغبتك في إلغاء التعديلات والرجوع للملف الطبي؟')) {
+      router.push(`/patients/${patientId.value}/medical-history`)
+    }
+  } else {
     router.push(`/patients/${patientId.value}/medical-history`)
   }
 }
@@ -460,6 +490,7 @@ const loadRuleForEdit = async (id) => {
       recipient: condObj.recipient || 'treating_doctor_only',
       is_active: rule.is_active !== false
     }
+    saveInitialState()
   } catch (e) {
     console.error('فشل تحميل تفاصيل القاعدة المخصصة:', e)
   } finally {
@@ -509,11 +540,14 @@ const submitRuleForm = async () => {
 }
 
 onMounted(async () => {
+  await fetchPatientDetails()
   await fetchGlobalRules() 
   if (route.params.ruleId) {
     isEditing.value = true
     currentRuleId.value = route.params.ruleId
     await loadRuleForEdit(route.params.ruleId)
+  } else {
+    saveInitialState()
   }
 })
 </script>

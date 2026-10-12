@@ -10,8 +10,8 @@ from reasoning.models import Insight
 class ReasoningEngine:
     """
     محرك استدلال هجين وذكي:
-    يجمع العلامات ويفحص القواعد والـ ML، مع تحديث طابع الوقت للإنذار النشط الحالي 
-    في آخر 10 دقائق بدلاً من كتابة سجلات مكررة ومزعجة في الداتابيز.
+    يجمع العلامات ويفحص العتبات، والـ ML، والقواعد المباشرة معاً،
+    مع الحفاظ المطلق على تاريخ بداية الرصد الأول (detected_at) ثابتاً دون مساس.
     """
 
     def __init__(self, ml_predictor: BasePredictor):
@@ -29,14 +29,20 @@ class ReasoningEngine:
         all_insights = []
 
         # 1. شبكة الأمان (قواعد الحدود السريرية الصارمة)
-        threshold_insights = self.threshold_predictor.predict(latest_history)
-        all_insights.extend(threshold_insights)
+        try:
+            threshold_insights = self.threshold_predictor.predict(latest_history)
+            all_insights.extend(threshold_insights)
+        except Exception as e:
+            print("🚨 [ReasoningEngine] خطأ في توقعات العتبات (Thresholds):", str(e))
 
         # 2. الذكاء السياقي (التنبؤ المبكر بنموذج MIMIC-IV)
-        ml_insights = self.ml_predictor.predict(latest_history)
-        all_insights.extend(ml_insights)
+        try:
+            ml_insights = self.ml_predictor.predict(latest_history)
+            all_insights.extend(ml_insights)
+        except Exception as e:
+            print("🚨 [ReasoningEngine] خطأ في توقعات نموذج الـ ML:", str(e))
 
-        # 3. التقييم الفوري والمباشر للقواعد والبروتوكولات (العامة والمخصصة) للمريض من السياق مباشرة
+        # 3. التقييم الفوري والمباشر للقواعد والبروتوكولات السريرية
         try:
             from rules.engine import evaluate_direct_rules
             rule_insights = evaluate_direct_rules(monitored_element, latest_history)
@@ -44,12 +50,16 @@ class ReasoningEngine:
         except Exception as e:
             print("🚨 [ReasoningEngine] خطأ أثناء تقييم القواعد المباشرة:", str(e))
 
-        # 🟢 4. تحديث السجل النشط الحالي أو إنشاء سجل جديد عند الاقتضاء (منع تكرار الكروت)
+        # 🟢 4. تحديث السجل النشط الحالي أو إنشاء سجل جديد عند الاقتضاء
         saved_insights = []
         ten_minutes_ago = timezone.now() - timedelta(minutes=10)
 
         for insight in all_insights:
-            # البحث عن استبصار نشط مشابه في آخر 10 دقائق لتحديثه
+            # التأكد من ربط الـ Insight بالسجل السياقي الأحدث (إلزامي وفقاً للموديل الجديد)
+            if not getattr(insight, 'context_history_id', None):
+                insight.context_history = latest_history
+
+            # البحث عن استبصار نشط مشابه في آخر 10 دقائق
             existing_insight = Insight.objects.filter(
                 monitored_element=insight.monitored_element,
                 insight_type=insight.insight_type,
@@ -58,15 +68,19 @@ class ReasoningEngine:
             ).order_by('-detected_at').first()
 
             if existing_insight:
-                # تحديث طابع الوقت للإنذار الحالي في الداتابيز ليبقى وحيداً ومحدثاً
-                existing_insight.detected_at = timezone.now()
+                # 🟢 الحفاظ التام على وقت البداية الأول (detected_at) دون مساس!
+                # نكتفي بتحديث الشدة ونسبة الثقة وأحدث سياق فقط
                 existing_insight.severity = insight.severity
                 existing_insight.confidence = insight.confidence
-                existing_insight.save()
+                existing_insight.context_history = latest_history
+                
+                # تم استبعاد detected_at لكي لا يُعاد كتابته أو تعديله في الداتابيز
+                existing_insight.save(update_fields=['severity', 'confidence', 'context_history'])
                 saved_insights.append(existing_insight)
             else:
-                # إنشاء سجل خطر جديد تماماً لبدء دورة خطر جديدة
-                insight.save()
+                # إذا لم يكن محفوظاً بالفعل في قاعدة البيانات، نقوم بحفظه وسيسجل detected_at تلقائياً لأول مرة
+                if not insight.id:
+                    insight.save()
                 saved_insights.append(insight)
 
         return saved_insights

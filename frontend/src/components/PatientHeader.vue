@@ -12,16 +12,16 @@
       :to="`/patients/${patient.id}/medical-history`"
       class="flex items-center justify-between gap-4 w-full md:w-auto md:min-w-[460px] z-10 cursor-pointer bg-white/5 border border-white/5 hover:border-white/12 hover:bg-white/10 rounded-3xl px-5 py-4 select-none transition-all duration-300 group/patient active:scale-[0.98]"
     >
-      <div class="flex items-center gap-6 min-w-0">
+      <div class="flex items-center gap-4 sm:gap-6 min-w-0 flex-1">
         <!-- الأفتار الدائري الأبيض مع أيقونة مستخدم واضحة ومعيارية تتوسط الدائرة تماماً -->
         <div class="w-14 h-14 rounded-full bg-white flex items-center justify-center text-[#0a3d48] shrink-0 shadow-md border border-white/10 overflow-hidden">
           <Icon icon="basil:user-solid" class="w-13 h-13 shrink-0 transition-transform duration-300 group-hover/patient:scale-105" />
         </div>
 
-        <div class="min-w-0">
+        <div class="min-w-0 flex-1">
           <!-- الاسم ومعرّف الهوية -->
           <div class="flex items-center gap-3">
-            <span class="text-base md:text-lg font-black text-white leading-tight group-hover/patient:text-teal-300 transition-colors">
+            <span class="text-base md:text-lg font-black text-white leading-tight group-hover/patient:text-teal-300 transition-colors truncate">
               {{ patient.full_name }}
             </span>
 
@@ -30,8 +30,8 @@
             </span> 
           </div>
 
-          <!-- السطر الفرعي (تم توسيع المسافات بين العناصر) -->
-          <div class="flex items-center gap-5 text-teal-100/70 text-xs font-bold mt-2 select-none">
+          <!-- السطر الفرعي: النوع، الجنس، العمر -->
+          <div class="flex items-center gap-4 sm:gap-5 text-teal-100/70 text-xs font-bold mt-1.5 select-none">
             <!-- النوع معرّب -->
             <span>{{ getPatientTypeLabel(patient.element_type) }}</span>
             
@@ -45,6 +45,36 @@
             <!-- العمر -->
             <span>{{ patient.age || 'غير محدد' }} سنة</span>
           </div>
+
+          <!-- 🟢 إطار موحد وأفقي لبيانات الطبيب ورقم هاتفه مع إمكانية التمرير الأفقي بدون زيادة الارتفاع -->
+          <div 
+            v-if="showDoctorInfo" 
+            class="flex items-center mt-2 max-w-full overflow-x-auto no-scrollbar select-none py-0.5"
+          >
+            <div class="inline-flex items-center shrink-0 backdrop-blur-xs text-[10px] sm:text-[11px] font-bold whitespace-nowrap">
+              <!-- اسم الطبيب -->
+              <div class="flex items-center gap-1.5 text-teal-200/90 shrink-0">
+                <Icon icon="solar:stethoscope-bold" class="w-3.5 h-3.5 text-teal-300 shrink-0" />
+                <span class="text-teal-300/80">الطبيب:</span>
+                <span class="text-white font-extrabold">{{ patient.doctor_name || 'غير محدد' }} /</span>
+              </div>
+
+              <!-- فاصل خفيف -->
+              <span v-if="patient.doctor_phone" class="w-px h-3 bg-white/20 shrink-0"></span>
+
+              <!-- رقم الهاتف المباشر كزر اتصال -->
+              <a 
+                v-if="patient.doctor_phone" 
+                :href="`tel:${patient.doctor_phone}`"
+                @click.stop
+                class="flex items-center gap-1 text-emerald-300  font-mono transition-colors shrink-0"
+                title="اتصال بالطبيب المعالج"
+              >
+                <span dir="ltr">{{ patient.doctor_phone }}</span>
+              </a>
+            </div>
+          </div>
+
         </div>
       </div>
 
@@ -61,7 +91,7 @@
     <div 
       class="relative p-[1.5px] rounded-3xl overflow-hidden shrink-0 w-full md:w-auto md:min-w-[340px] z-10 flex items-center justify-center"
     >
-      <!-- الحدود المضيئة التفاعلية (تم ربطها بـ CSS Property لضمان الحركة الدائرية الناعمة والمستمرة كالزبدة) -->
+      <!-- الحدود المضيئة التفاعلية -->
       <div 
         class="absolute inset-0 border-beam" 
         :style="{
@@ -70,7 +100,7 @@
         }"
       ></div>
 
-      <!-- 🟢 الكبسولة الداخلية (تقوم بقناع التدرج ومزودة بـ نبض خفيف ولطيف باللون الأخضر الداكن على الإطار والظل عند التحديث) -->
+      <!-- الكبسولة الداخلية -->
       <div 
         :class="justUpdated ? 'border-emerald-600/35 shadow-[0_0_12px_rgba(5,150,105,0.15)] bg-[#0a313b]/95' : 'border-white/5 shadow-inner bg-[#0a313b]/95'"
         class="w-full h-full rounded-[23px] p-3 px-6 flex items-center justify-between gap-6 select-none transition-all duration-300 backdrop-blur-md"
@@ -96,7 +126,7 @@
 
         <span class="w-px h-6 bg-white/10"></span>
 
-        <!-- 3. العداد الدائري: مكبر بالكامل لـ w-14 h-14، معبأ باللون الأبيض الناصع، وذو دوران انسيابي متصل ومستقر -->
+        <!-- 3. العداد الدائري -->
         <div class="relative flex items-center justify-center shrink-0 select-none">
           <svg class="w-14 h-14 transform -rotate-90">
             <circle cx="28" cy="28" r="22" stroke="rgba(255,255,255,0.06)" stroke-width="3" fill="transparent" />
@@ -123,7 +153,8 @@
 
 <script setup>
 import { computed } from 'vue'
-import { Icon } from '@iconify/vue' // استيراد الأيقونات الموحدة إجبارياً لمنع تداخل الـ SVGs
+import { Icon } from '@iconify/vue'
+import { useDoctorStore } from '../stores/doctor'
 
 const props = defineProps({
   patient: {
@@ -148,12 +179,21 @@ const props = defineProps({
   }
 })
 
-// حساب النسبة المئوية للعداد التنازلي لإغلاق وفتح شريط ليزر الحدود المضيء ديناميكياً
+const doctorStore = useDoctorStore()
+
+// إظهار بيانات الطبيب لمقدمي الرعاية ولمدراء النظام
+const showDoctorInfo = computed(() => {
+  const role = doctorStore.role || localStorage.getItem('user_role') || ''
+  const superuser = doctorStore.is_superuser || localStorage.getItem('is_superuser') === 'true'
+  return role === 'caregiver' || role === 'nurse' || role === 'admin' || superuser === true
+})
+
+// حساب النسبة المئوية للعداد التنازلي
 const countdownPercent = computed(() => {
   return `${(props.countdown / 30) * 100}%`
 })
 
-// دالة حركية تقوم بترجمة مسمى حالة المريض تلقائياً للعربية لمنع ظهور أي كلمة إنجليزية بالواجهة
+// دالة تعريب نوع المريض
 const getPatientTypeLabel = (type) => {
   if (!type) return 'مريض'
   const t = String(type).toLowerCase()
@@ -165,20 +205,26 @@ const getPatientTypeLabel = (type) => {
 </script>
 
 <style scoped>
-/* تسجيل حقل النسبة المئوية المخصصة لتمكين المتصفحات من معالجة الحركة الانتقالية التنازلية بنعومة كاملة كالزبدة وبدون أي تقطع */
 @property --countdown-percent {
   syntax: '<percentage>';
   inherits: false;
   initial-value: 100%;
 }
 
-/* ربط الحركة بـ 1s linear لضمان تدفق الليزر بشكل مستمر متناسق مع دوران العداد الدائري */
 .border-beam {
   transition: --countdown-percent 1s linear;
 }
 
-/* التحديث الحركي لـ ease-linear يضمن حركة التايمر الدائري بشكل انسيابي متصل وليس متقطع */
 circle {
   transition: stroke-dashoffset 1s linear, stroke 0.3s ease;
+}
+
+/* إخفاء شريط التمرير الافتراضي لإبقاء المظهر أنيقاً */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 </style>

@@ -157,7 +157,7 @@ const roleLabel = computed(() => {
 const roleIcon = computed(() => {
   if (profile.value.role === 'admin' || profile.value.is_superuser) return 'eos-icons:admin'
   if (profile.value.role === 'doctor') return 'maki:doctor'
-  if (profile.value.role === 'caregiver' || profile.value.role === 'nurse') return 'mdi:hand-heart'
+  if (profile.value.role === 'caregiver' || profile.value.role === 'nurse') return 'boxicons:handshake-filled'
   return 'mdi:account'
 })
 

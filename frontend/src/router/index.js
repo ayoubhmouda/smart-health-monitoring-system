@@ -1,16 +1,28 @@
 // router/index.js
 import { createRouter, createWebHistory } from 'vue-router'
-import { usePatientStore } from '../stores/patient' // استيراد متجر المريض للإغلاق التلقائي
-import Login from '../views/login.vue'       // 🟢 تم تصحيح حرف l الصغير
-import Register from '../views/register.vue' // 🟢 تم تصحيح حرف r الصغير
-import Dashboard from '../views/dashboard.vue' // 🟢 تم تصحيح حرف d الصغير لمطابقة اسم الملف على القرص
+import { usePatientStore } from '../stores/patient'
+import Register from '../views/register.vue'
+import Dashboard from '../views/dashboard.vue'
 
 const routes = [
-  { path: '/', redirect: '/login' },
-  { path: '/login', component: Login },
+  // 🟢 1. الصفحة الرئيسية (تفتح من الأعلى بشكل طبيعي)
+  {
+    path: '/',
+    name: 'LandingPage',
+    component: () => import('../views/LandingPage.vue')
+  },
+
+  // 🟢 2. تحويل أي طلب لـ /login إلى الصفحة الرئيسية مباشرة من بدايتها
+  { 
+    path: '/login', 
+    redirect: '/' 
+  },
+
   { path: '/register', component: Register },
+
   {
     path: '/dashboard',
+    name: 'Dashboard',
     component: Dashboard,
     meta: { requiresAuth: true }
   },
@@ -24,25 +36,25 @@ const routes = [
     path: '/doctors',
     name: 'DoctorManagement',
     component: () => import('../views/DoctorManagement.vue'),
-    meta: { requiresAuth: true } // تم إزالة شرط الأدمن للسماح للأطباء بالدخول وتصفح الكادر الطبي (قراءة فقط)
+    meta: { requiresAuth: true }
   },
   {
     path: '/protocols',
     name: 'ClinicalProtocols',
     component: () => import('../views/ClinicalProtocols.vue'),
-    meta: { requiresAuth: true } // تم إزالة شرط الأدمن للسماح للأطباء بالدخول وقراءة البروتوكولات السريرية
+    meta: { requiresAuth: true }
   },
   {
     path: '/protocols/new',
     name: 'CreateProtocol',
     component: () => import('../views/ProtocolBuilder.vue'),
-    meta: { requiresAuth: true, requiresAdmin: true } // حصر إضافة بروتوكول جديد لمدير النظام فقط
+    meta: { requiresAuth: true, requiresAdmin: true }
   },
   {
     path: '/protocols/edit/:id',
     name: 'EditProtocol',
     component: () => import('../views/ProtocolBuilder.vue'),
-    meta: { requiresAuth: true, requiresAdmin: true } // حصر تعديل بروتوكول قائم لمدير النظام فقط
+    meta: { requiresAuth: true, requiresAdmin: true }
   },
   {
     path: '/profile',
@@ -50,14 +62,12 @@ const routes = [
     component: () => import('../views/Profile.vue'),
     meta: { requiresAuth: true }
   },
-  // مسار إضافة مريض جديد
   {
     path: '/patients/new',
     name: 'AddPatient',
     component: () => import('../views/AddPatient.vue'),
     meta: { requiresAuth: true }
   },
-  // مسارات قواعد المريض المخصصة
   {
     path: '/patients/:id/rules/new',
     name: 'CreatePatientRule',
@@ -70,18 +80,10 @@ const routes = [
     component: () => import('../views/PatientRuleBuilder.vue'),
     meta: { requiresAuth: true }
   },
-  // مسار الإشعارات الطارئة
   {
     path: '/alerts',
     name: 'Alerts',
     component: () => import('../views/Alerts.vue'),
-    meta: { requiresAuth: true }
-  },
-  // إضافة مسار صفحة الإعدادات (Settings) إلى الراوتر
-  {
-    path: '/settings',
-    name: 'settings',
-    component: () => import('../views/Settings.vue'),
     meta: { requiresAuth: true }
   }
 ]
@@ -89,23 +91,36 @@ const routes = [
 const router = createRouter({
   history: createWebHistory(),
   routes,
+  scrollBehavior(to, from, savedPosition) {
+    if (to.hash) {
+      return { 
+        el: to.hash, 
+        behavior: 'smooth',
+        top: 80 
+      }
+    }
+    // 🟢 العودة دائماً لأعلى الصفحة عند فتح أي صفحة جديدة
+    return savedPosition || { top: 0 }
+  }
 })
 
-// حارس التنقل - الأسلوب الجديد (return بدلاً من next())
+// 🟢 حارس التنقل
 router.beforeEach((to, from) => {
   const token = localStorage.getItem('token')
   const userRole = localStorage.getItem('user_role') || 'doctor'
   const isSuperuser = localStorage.getItem('is_superuser') === 'true'
 
+  // 1. التوجيه لبداية الصفحة الرئيسية إذا لم يكن مسجلاً
   if (to.meta.requiresAuth && !token) {
-    return '/login'
+    return '/'
   }
   
+  // 2. إذا كان مسجلاً بالفعل وحاول الذهاب لـ /login حوّله للداشبورد
   if (to.path === '/login' && token) {
     return '/dashboard'
   }
 
-  // طرد المستخدم إذا حاول الدخول لصفحات الصيانة والإضافة ( requiresAdmin ) وهو ليس مديراً
+  // 3. حماية صفحات الأدمن
   if (to.meta.requiresAdmin && userRole !== 'admin' && !isSuperuser) {
     console.warn('⚠️ هذه الصفحة مخصصة لمدير النظام والطبيب المشرف فقط!')
     return '/dashboard'
@@ -114,13 +129,11 @@ router.beforeEach((to, from) => {
   return true
 })
 
-// الحل السحري للجوال: إغلاق السايدبار بأمان تام وتلقائياً بعد نجاح تحويل الصفحة
 router.afterEach(() => {
   try {
     const store = usePatientStore()
     store.isSidebarOpen = false
   } catch (e) {
-    // تجاهل الأخطاء الصامتة في الجلسات الأولى قبل تحميل المتجر
   }
 })
 

@@ -3,7 +3,7 @@
   <aside
     class="flex flex-col overflow-hidden shadow-2xl transition-transform duration-300 border-l border-white/10
       fixed top-16 bottom-0 right-0 z-40 w-[245px] max-w-[90vw]
-      lg:static lg:top-auto lg:bottom-auto lg:z-auto lg:w-[245px] lg:max-w-none lg:translate-x-0 lg:h-full"
+      lg:static lg:top-auto lg:bottom-auto lg:z-auto lg:w-[245px] lg:max-w-none lg:translate-x-0 lg:h-full select-none"
     :class="{
       'translate-x-full': !store.isSidebarOpen,
       'translate-x-0': store.isSidebarOpen
@@ -41,8 +41,8 @@
         </nav>
       </div>
 
-      <!-- Primary Action: Add Patient (ثابت) -->
-      <div class="px-3 py-2 flex-shrink-0">
+      <!-- Primary Action: Add Patient (يظهر للطبيب والمشرف فقط) -->
+      <div v-if="canAddPatient" class="px-3 py-2 flex-shrink-0">
         <router-link to="/patients/new" class="add-patient-btn">
           <Icon icon="mdi:plus" class="w-4 h-4" />
           <span>إضافة مريض جديد</span>
@@ -59,7 +59,6 @@
 
       <!-- Patient List (الوحيد القابل للتمرير والمصنف فسيولوجياً بالأولوية التامة) -->
       <nav class="flex-1 min-h-0 overflow-y-auto px-2 py-1.5 custom-scrollbar space-y-0.5">
-        <!-- 🟢 الربط بـ sortedPatients بدلاً من القائمة العادية ليتصدر مريض الخطر القائمة فوراً -->
         <div
           v-for="patient in sortedPatients"
           :key="patient.id"
@@ -75,7 +74,7 @@
                   <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
                   <span class="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
                 </span>
-                <!-- 🟢 الوميض النبضي البرتقالي الهادئ للخطر المتوسط (تم تصحيح خطأ اللصق تماماً هنا) -->
+                <!-- الوميض النبضي البرتقالي الهادئ للخطر المتوسط -->
                 <span v-else-if="alertsStore.patientAlertStates[patient.id] === 'HIGH'" class="flex h-2 w-2 relative shrink-0">
                   <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
                   <span class="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
@@ -108,16 +107,16 @@
         </div>
       </nav>
 
-      <!-- Footer: Profile Card (ثابت) -->
-      <footer class="p-2.5 border-t border-white/10 bg-black/15 flex-shrink-0">
+      <!-- 🟢 Footer: Profile Card + زر تسجيل الخروج المضاف -->
+      <footer class="p-2.5 border-t border-white/10 bg-black/15 flex-shrink-0 space-y-2">
+        
+        <!-- بطاقة الملف الشخصي -->
         <router-link
           to="/profile"
           class="group flex items-center gap-2.5 p-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all duration-200"
         >
-          <div
-            class="w-9 h-9 shrink-0 rounded-lg flex items-center justify-center bg-teal-500/20 text-cyan-200 border border-teal-400/30 group-hover:bg-teal-500/30 transition-colors"
-          >
-            <Icon :icon="roleIcon" class="w-5 h-5" />
+          <div class="shrink-0 flex items-center justify-center text-teal-300 group-hover:scale-105 transition-transform">
+            <Icon :icon="roleIcon" class="w-6 h-6 shrink-0" />
           </div>
 
           <div class="min-w-0 flex-1">
@@ -127,6 +126,19 @@
 
           <Icon icon="mdi:chevron-left" class="w-4 h-4 shrink-0 text-cyan-200/40" />
         </router-link>
+
+        <!-- 🟢 زر تسجيل الخروج المضاف أسفل الملف الشخصي -->
+        <button
+          @click="handleLogout"
+          class="w-full flex items-center justify-between px-3 py-2 rounded-xl text-rose-300/90 hover:text-white bg-rose-500/10 hover:bg-rose-500/25 border border-rose-500/20 hover:border-rose-500/40 transition-all duration-200 cursor-pointer text-xs font-bold shadow-xs"
+        >
+          <div class="flex items-center gap-2">
+            <Icon icon="solar:logout-2-bold" class="w-4 h-4 text-rose-400" />
+            <span>تسجيل الخروج</span>
+          </div>
+          <Icon icon="mdi:chevron-left" class="w-3.5 h-3.5 opacity-40" />
+        </button>
+
       </footer>
     </div>
   </aside>
@@ -163,13 +175,12 @@ const roleLabel = computed(() => {
   return 'طبيب'
 })
 
-// أيقونة الدور من Iconify
 const roleIcon = computed(() => {
-  if (isAdmin.value) return 'eos-icons:admin'
+  if (isAdmin.value) return 'solar:shield-user-bold'
   const role = doctorStore.role || ''
-  if (role === 'doctor') return 'maki:doctor'
-  if (role === 'caregiver' || role === 'nurse') return 'mdi:hand-heart'
-  return 'mdi:account'
+  if (role === 'doctor') return 'solar:stethoscope-bold'
+  if (role === 'caregiver' || role === 'nurse') return 'boxicons:handshake-filled'
+  return 'solar:user-bold'
 })
 
 /* Permissions */
@@ -177,6 +188,11 @@ const isAdmin = computed(() => {
   const role = doctorStore.role || localStorage.getItem('user_role')
   const superuser = doctorStore.is_superuser || localStorage.getItem('is_superuser') === 'true'
   return role === 'admin' || superuser === true
+})
+
+const canAddPatient = computed(() => {
+  const role = doctorStore.role || localStorage.getItem('user_role') || ''
+  return role === 'doctor' || role === 'admin' || isAdmin.value
 })
 
 /* Navigation Items */
@@ -198,12 +214,6 @@ const navigation = [
     to: '/alerts',
     icon: 'grommet-icons:form-next',
     allowedRoles: ['admin', 'doctor', 'caregiver', 'nurse']
-  },
-  {
-    label: 'الإعدادات',
-    to: '/settings',
-    icon: 'grommet-icons:form-next',
-    allowedRoles: ['admin', 'doctor', 'caregiver', 'nurse']
   }
 ]
 
@@ -214,6 +224,22 @@ const visibleNavigation = computed(() => {
     return item.allowedRoles.includes(currentRole) || (isAdmin.value && item.allowedRoles.includes('admin'))
   })
 })
+
+/* 🟢 تنفيذ عملية تسجيل الخروج بأمان */
+const handleLogout = () => {
+  // 1. مسح التوكن وبيانات المستخدم من المتصفح
+  localStorage.removeItem('token')
+  localStorage.removeItem('user_role')
+  localStorage.removeItem('is_superuser')
+  localStorage.removeItem('user')
+
+  // 2. تصفير الحالة في الـ Store
+  store.isSidebarOpen = false
+  store.currentPatient = null
+
+  // 3. التوجيه المباشر للصفحة الرئيسية من البداية
+  router.push('/')
+}
 
 /* Patient Handling */
 const fetchPatients = async () => {
@@ -272,7 +298,13 @@ const selectPatient = patient => {
 
 if (store.isSidebarOpen === undefined) store.isSidebarOpen = false
 if (store.showAddModal === undefined) store.showAddModal = false
-onMounted(fetchPatients)
+
+onMounted(async () => {
+  if (!doctorStore.role) {
+    await doctorStore.fetchProfile()
+  }
+  fetchPatients()
+})
 </script>
 
 <style scoped>

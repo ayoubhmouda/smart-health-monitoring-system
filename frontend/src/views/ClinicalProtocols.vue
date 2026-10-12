@@ -182,18 +182,21 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '../api'
+import { useDoctorStore } from '../stores/doctor' // 🟢 1. استيراد الـ Store
 import { 
   FileText, Plus, ClipboardList, CheckCircle, AlertTriangle,
   Pencil, Trash2
 } from 'lucide-vue-next'
 
 const router = useRouter()
+const doctorStore = useDoctorStore() // 🟢 2. تهيئة الـ Store
 const rules = ref([])
 const loading = ref(true)
 
+// 🟢 3. التحقق الحقيقي من الأدمن عبر الـ Store
 const currentUserIsAdmin = computed(() => {
-  const role = localStorage.getItem('user_role')
-  const superuser = localStorage.getItem('is_superuser') === 'true'
+  const role = doctorStore.role || localStorage.getItem('user_role')
+  const superuser = doctorStore.is_superuser || localStorage.getItem('is_superuser') === 'true'
   return role === 'admin' || superuser === true
 })
 
@@ -264,7 +267,11 @@ const deleteRule = async (id) => {
   }
 }
 
-onMounted(() => {
+// 🟢 4. جلب البروفايل أولاً ليتعرف على دور الأدمن فور فتح الصفحة
+onMounted(async () => {
+  if (!doctorStore.role) {
+    await doctorStore.fetchProfile()
+  }
   fetchRules()
 })
 </script>

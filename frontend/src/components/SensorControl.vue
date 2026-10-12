@@ -2,7 +2,7 @@
 <template>
   <div class="relative rounded-3xl border border-white/10 shadow-xl flex flex-col gap-5 select-none bg-gradient-to-b from-[#0a3d48] via-[#0e4f5e] to-[#08323c] p-5 sm:p-6 text-cyan-100/80" dir="rtl">
     
-    <!-- هيدر لوحة التحكم المركزية الخالي من العبارات المملة -->
+    <!-- هيدر لوحة التحكم المركزية -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-3 mb-2 border-b border-white/10 gap-3">
       <div class="flex items-center gap-2.5">
         <div class="w-7 h-7 rounded-xl bg-white/10 flex items-center justify-center text-teal-300 backdrop-blur-sm">
@@ -67,6 +67,7 @@
         </div>
 
         <div class="lg:col-span-5">
+          <!-- خيارات السيناريو الموحد للباكيند الـ 5 السريرية المعتمدة -->
           <select
             v-if="isMasterSimulated"
             v-model="bulkProfile"
@@ -76,10 +77,9 @@
             <option value="">اختر سيناريو موحد...</option>
             <option value="normal">الوضع الطبيعي المستقر</option>
             <option value="gradual_deterioration">تدهور فسيولوجي تدريجي</option>
-            <option value="emergency_spike">نوبة طوارئ حادة</option>
-            <option value="abnormal">مؤشرات شاذة منخفضة</option>
-            <option value="recovery">مرحلة الاستشفاء</option>
-            <option value="random">محاكاة عشوائية</option>
+            <option value="gradual_recovery">تحسن فسيولوجي تدريجي</option>
+            <option value="sudden_high">ارتفاع حاد مفاجئ</option>
+            <option value="sudden_low">انخفاض حاد مفاجئ</option>
           </select>
           <div v-else class="w-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-[11px] font-bold py-2 px-3 rounded-xl text-center flex items-center justify-center gap-1.5 backdrop-blur-sm">
             <Wifi :size="12" class="text-emerald-400" />
@@ -98,7 +98,7 @@
           <ChevronDown :size="14" class="text-cyan-300/50 group-open:rotate-180 transition-transform duration-200" />
         </summary>
 
-        <!-- 🟢 شبكة الكروت البيضاء المضيئة المفتوحة لتقليل التعتيم الشديد والمنسجمة مع الهوية السريرية -->
+        <!-- شبكة الكروت البيضاء المنسجمة مع الهوية السريرية -->
         <div class="p-3 bg-teal-950/20 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 select-none">
           <div 
             v-for="sensor in pairedSensors" 
@@ -110,7 +110,7 @@
                 : 'bg-slate-100 text-slate-400 border-slate-200/50 opacity-60'
             ]"
           >
-            <!-- رأس الكرت وبداخله السويتش النشط مع زر الثلاث نقاط التفاعلي الجديد للاجراءات والمصدر -->
+            <!-- رأس الكرت وبداخله السويتش النشط مع زر الثلاث نقاط التفاعلي -->
             <div class="flex items-start justify-between gap-2 relative">
               <div class="min-w-0">
                 <h4 class="font-black text-slate-800 text-[11px] truncate flex items-center gap-1">
@@ -120,7 +120,7 @@
                 <span class="text-[9px] font-mono font-bold text-slate-400 block mt-0.5">ID: {{ sensor.device_identifier }}</span>
               </div>
 
-              <!-- 🟢 حلقة الإجراءات المجمعة بداخل زر ثلاث نقاط أنيق ومنزلق -->
+              <!-- حلقة الإجراءات المجمعة بداخل زر ثلاث نقاط أنيق ومنزلق -->
               <div class="flex items-center gap-1">
                 <button 
                   v-if="sensor.is_active"
@@ -131,7 +131,7 @@
                   <MoreVertical :size="14" stroke-width="2.5" />
                 </button>
 
-                <!-- 🟢 منبثقة الخيارات المنفردة للحساس (تغيير المصدر من محاكي لحقيقي بشكل منفرد، وتعديل المسمى، والحذف) -->
+                <!-- منبثقة الخيارات المنفردة للحساس -->
                 <div 
                   v-if="activeMenuSensorId === sensor.id"
                   class="absolute left-0 top-7 w-36 bg-white border border-slate-200 rounded-xl shadow-lg z-30 py-1.5 text-[10px] font-bold text-slate-700 animate-[fadeIn_0.15s_ease-out]"
@@ -183,12 +183,22 @@
                   @change="changeProfile(sensor, $event.target.value)"
                   class="w-full bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 font-bold text-slate-700 outline-none text-right focus:border-teal-500/50 text-[10px] cursor-pointer"
                 >
-                  <option value="normal">سيناريو طبيعي</option>
-                  <option value="abnormal">سيناريو شاذ</option>
-                  <option value="gradual_deterioration">تدهور تدريجي</option>
-                  <option value="emergency_spike">نوبة حادة</option>
-                  <option value="random">تغيير عشوائي</option>
-                  <option value="custom">مخصص</option>
+                  <!-- 🟢 1. تخصيص كروت وضعيات النشاط الحركي الحصرية والمستقلة -->
+                  <template v-if="sensor.sensor_type?.name === 'Activity Level'">
+                    <option value="activity_resting">سكون / نوم</option>
+                    <option value="activity_sitting">جلوس</option>
+                    <option value="activity_walking">مشي</option>
+                    <option value="activity_running">جري / ركض</option>
+                  </template>
+
+                  <!-- 🟢 2. الحساسات الأخرى تعرض السيناريوهات السريرية الـ 5 المعتمدة -->
+                  <template v-else>
+                    <option value="normal">الوضع الطبيعي المستقر</option>
+                    <option value="gradual_deterioration">تدهور فسيولوجي تدريجي</option>
+                    <option value="gradual_recovery">تحسن فسيولوجي تدريجي</option>
+                    <option value="sudden_high">ارتفاع حاد مفاجئ</option>
+                    <option value="sudden_low">انخفاض حاد مفاجئ</option>
+                  </template>
                 </select>
                 
                 <span v-else class="text-[9px] text-emerald-700 font-extrabold py-1.5 flex items-center justify-center gap-1 select-none font-mono bg-emerald-50 border border-emerald-100 rounded-lg">
@@ -202,7 +212,7 @@
               </div>
             </div>
 
-            <!-- مؤشر صغير يوضح مصدر الحساس في زاوية الكارت بشكل ناعم وغير ممل -->
+            <!-- مؤشر صغير يوضح مصدر الحساس في زاوية الكارت -->
             <div class="absolute bottom-2 left-2.5 opacity-60">
               <span v-if="getConfig(sensor)?.source === 'SIMULATED'" class="text-amber-500" title="بث محاكي بالـ CPU"><icon  :size="10" /></span>
               <span v-else class="text-emerald-500" title="جهاز بث فسيولوجي فعلي"><Wifi :size="10" /></span>
@@ -214,7 +224,7 @@
 
     <!-- 1. منبثقة تعديل اسم الحساس -->
     <Teleport to="body">
-      <div v-if="showRenameModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div v-if="showRenameModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-55 flex items-center justify-center p-4">
         <div class="bg-slate-900 border border-slate-700 rounded-3xl shadow-2xl w-full max-w-md p-6 space-y-4 text-cyan-100">
           <div class="flex items-center justify-between border-b border-slate-700 pb-3">
             <h3 class="text-sm font-extrabold text-white">تعديل معرف الحساس</h3>
@@ -248,7 +258,7 @@
 
     <!-- 2. منبثقة ربط حساس مخصص جديد -->
     <Teleport to="body">
-      <div v-if="showAddModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div v-if="showAddModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-55 flex items-center justify-center p-4">
         <div class="bg-slate-900 border border-slate-700 rounded-3xl shadow-2xl w-full max-w-md p-6 space-y-4 text-cyan-100">
           <div class="flex items-center justify-between border-b border-slate-700 pb-3">
             <h3 class="text-sm font-extrabold text-white">ربط مستشعر جديد</h3>
@@ -319,7 +329,7 @@ const showAddModal = ref(false)
 const renameForm = ref({ id: null, device_identifier: '' })
 const addForm = ref({ sensor_type_id: null, device_identifier: '' })
 
-// 🟢 معرف كرت القائمة المنسدلة المفتوح حالياً لزر الثلاث نقاط
+// معرف كرت القائمة المنسدلة المفتوح حالياً لزر الثلاث نقاط
 const activeMenuSensorId = ref(null)
 
 const toggleCardMenu = (sensorId) => {
@@ -384,7 +394,7 @@ async function toggleSensorActive(sensor) {
   }
 }
 
-// 🟢 تبديل مصدر البث بشكل فردي ومنعزل لكل حساس من خلال زر الثلاث نقاط
+// تبديل مصدر البث بشكل فردي ومنعزل لكل حساس من خلال زر الثلاث نقاط
 async function toggleSingleSensorSource(sensor) {
   const cfg = getConfig(sensor)
   if (!cfg?.id) return
@@ -530,7 +540,7 @@ const openAddSensorModal = () => {
   showAddModal.value = true
 }
 
-// 🟢 إغلاق قائمة الثلاث نقاط تلقائياً عند النقر في أي مكان خارج الكارت
+// إغلاق قائمة الثلاث نقاط تلقائياً عند النقر في أي مكان خارج الكارت
 onMounted(() => {
   window.addEventListener('click', () => {
     activeMenuSensorId.value = null

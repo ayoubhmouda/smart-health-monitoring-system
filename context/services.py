@@ -1,9 +1,14 @@
-from datetime import datetime
+# context/services.py
+from django.utils import timezone
 from sensors.models import SensorReading, SensorType, Sensor
-from .models import Context, ContextHistory
+from .models import ContextHistory
+
 
 class ContextAggregator:
-    """يجمع أحدث قراءات الحساسات لكل أنواع القياس ويبني سياقًا واحدًا."""
+    """
+    يجمع أحدث قراءات الحساسات للمريض ويبني سجلاً سياقياً واحداً
+    مباشرة في ContextHistory دون الحاجة لجدول وسيط.
+    """
 
     def aggregate_for(self, monitored_element):
         # لا تبني سياقاً لمريض ليس لديه حساسات نشطة
@@ -18,7 +23,7 @@ class ContextAggregator:
         for stype in all_types:
             latest = SensorReading.objects.filter(
                 sensor__sensor_type=stype,
-                sensor__monitored_element=monitored_element  # تصفية حسب المريض
+                sensor__monitored_element=monitored_element
             ).order_by('-recorded_at').first()
 
             if latest:
@@ -30,17 +35,15 @@ class ContextAggregator:
                 elif stype.category == SensorType.Category.ENVIRONMENTAL:
                     env_data[key] = latest.value
 
-        ctx = Context.objects.create(
+        # إذا لم يتم العثور على أي قراءات على الإطلاق، نتجنب حفظ سجل فارغ
+        if not (phys_data or act_data or env_data):
+            return None
+
+        # الحفظ المباشر في السجل الزمني التراكمي الموحد (ContextHistory)
+        history = ContextHistory.objects.create(
             monitored_element=monitored_element,
             physiological_data=phys_data,
             activity_data=act_data,
-            environmental_data=env_data,
-            timestamp=datetime.utcnow()
+            environmental_data=env_data
         )
-
-        ContextHistory.objects.create(
-            monitored_element=monitored_element,
-            context=ctx,
-            recorded_at=datetime.utcnow()
-        )
-        return ctx
+        return history

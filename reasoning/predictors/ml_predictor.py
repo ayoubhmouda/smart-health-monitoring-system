@@ -6,7 +6,7 @@ from context.models import ContextHistory
 from core.models import MedicalHistory
 from reasoning.models import Insight
 from .base import BasePredictor
-# 🟢 استيراد دالة هندسة الميزات الموحدة
+# استيراد دالة هندسة الميزات الموحدة
 from reasoning.ml.feature_engineering import extract_features_from_window
 
 
@@ -78,11 +78,11 @@ class MLPredictor(BasePredictor):
         # تحويل بيانات الحساسات المختلفة إلى قائمة من القواميس المسطحة (Flat Dicts)
         flat_contexts = []
         for ctx_h in recent:
-            ctx = ctx_h.context
+            # تم التكييف: القراءة المباشرة من سجل ContextHistory
             merged = {}
-            merged.update(ctx.physiological_data or {})
-            merged.update(ctx.activity_data or {})
-            merged.update(ctx.environmental_data or {})
+            merged.update(ctx_h.physiological_data or {})
+            merged.update(ctx_h.activity_data or {})
+            merged.update(ctx_h.environmental_data or {})
             flat_contexts.append(merged)
 
         # التأكد من توفر علامات حيوية رئيسية واحدة على الأقل في النافذة الزمنية
@@ -92,7 +92,7 @@ class MLPredictor(BasePredictor):
         # استخراج الميزات الطبية الثابتة للمريض
         med_features = self._extract_medical_history_features(element)
 
-        # 🟢 استدعاء دالة هندسة الميزات الموحدة
+        # استدعاء دالة هندسة الميزات الموحدة
         features_dict = extract_features_from_window(flat_contexts, med_features)
 
         # تنظيم الميزات كـ DataFrame متوافق مع مدخلات النموذج الرياضي
